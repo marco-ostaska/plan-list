@@ -82,23 +82,48 @@ app.get("/api/vault", async (req, res) => {
           }
           const fileReads = [];
           for (const sub of subEntries) {
-            if (sub.name.startsWith(".") || !sub.name.endsWith(".md")) continue;
+            if (sub.name.startsWith(".")) continue;
             const subFull = path.join(full, sub.name);
-            fileReads.push(
-              (async () => {
-                try {
-                  const subStat = await fs.promises.stat(subFull);
-                  const content = await fs.promises.readFile(subFull, "utf8");
-                  folder.files.push({
-                    id: relPath(vault, subFull),
-                    name: sub.name,
-                    updated: formatMtime(subStat.mtimeMs),
-                    content,
-                    comments: [],
-                  });
-                } catch {}
-              })()
-            );
+            if (sub.isFile() && sub.name.endsWith(".md")) {
+              fileReads.push(
+                (async () => {
+                  try {
+                    const subStat = await fs.promises.stat(subFull);
+                    const content = await fs.promises.readFile(subFull, "utf8");
+                    folder.files.push({
+                      id: relPath(vault, subFull),
+                      name: sub.name,
+                      updated: formatMtime(subStat.mtimeMs),
+                      content,
+                      comments: [],
+                    });
+                  } catch {}
+                })()
+              );
+            } else if (sub.isDirectory()) {
+              try {
+                const nestedEntries = await fs.promises.readdir(subFull, { withFileTypes: true });
+                for (const nested of nestedEntries) {
+                  if (nested.name.startsWith(".") || !nested.name.endsWith(".md")) continue;
+                  const nestedFull = path.join(subFull, nested.name);
+                  fileReads.push(
+                    (async () => {
+                      try {
+                        const nestedStat = await fs.promises.stat(nestedFull);
+                        const content = await fs.promises.readFile(nestedFull, "utf8");
+                        folder.files.push({
+                          id: relPath(vault, nestedFull),
+                          name: `${sub.name}/${nested.name}`,
+                          updated: formatMtime(nestedStat.mtimeMs),
+                          content,
+                          comments: [],
+                        });
+                      } catch {}
+                    })()
+                  );
+                }
+              } catch {}
+            }
           }
           await Promise.all(fileReads);
         })()
@@ -295,6 +320,12 @@ app.get("/api/watch", (req, res) => {
   });
   watcher.on("unlink", (filePath) => {
     send("remove", { path: relPath(vault, filePath) });
+  });
+  watcher.on("addDir", (dirPath) => {
+    send("add", { path: relPath(vault, dirPath) });
+  });
+  watcher.on("unlinkDir", (dirPath) => {
+    send("remove", { path: relPath(vault, dirPath) });
   });
 
   const cleanup = () => {
