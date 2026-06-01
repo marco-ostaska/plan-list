@@ -142,6 +142,7 @@ textarea, input {
   border-right: 1px solid var(--line);
   background: var(--bg-panel);
   min-width: 0;
+  min-height: 0;
 }
 
 .sidebar-head {
@@ -265,6 +266,16 @@ textarea, input {
   font-weight: 400;
 }
 
+.folder-header .folder-new-btn {
+  opacity: 0;
+  width: 20px;
+  height: 20px;
+  font-size: 16px;
+}
+.folder-header:hover .folder-new-btn {
+  opacity: 1;
+}
+
 .folder-files {
   display: flex;
   flex-direction: column;
@@ -342,6 +353,7 @@ textarea, input {
   display: flex;
   flex-direction: column;
   min-width: 0;
+  min-height: 0;
   background: var(--bg);
 }
 
