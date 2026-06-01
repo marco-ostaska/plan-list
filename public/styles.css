@@ -265,6 +265,16 @@ textarea, input {
   font-weight: 400;
 }
 
+.folder-header .folder-new-btn {
+  opacity: 0;
+  width: 20px;
+  height: 20px;
+  font-size: 16px;
+}
+.folder-header:hover .folder-new-btn {
+  opacity: 1;
+}
+
 .folder-files {
   display: flex;
   flex-direction: column;

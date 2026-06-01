@@ -301,16 +301,30 @@ function App() {
 
   // ── New file ───────────────────────────────────────────────────────────────
 
-  const handleNewFile = async () => {
+  const handleNewFile = async (dir = "") => {
     if (!vaultPath) return;
+    const rawName = window.prompt("Nome do novo documento:", "Novo documento");
+    if (!rawName) return;
+    const name = rawName.trim() || "Novo documento";
     const r = await fetch("/api/file", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ vault: vaultPath, dir: "", name: "Sem título" }),
+      body: JSON.stringify({ vault: vaultPath, dir, name }),
     });
     if (!r.ok) return;
     const newFile = await r.json();
-    setVault((v) => ({ ...v, rootFiles: [newFile, ...v.rootFiles] }));
+    setVault((v) => {
+      if (!v) return v;
+      if (!dir) {
+        return { ...v, rootFiles: [newFile, ...v.rootFiles] };
+      }
+      return {
+        ...v,
+        folders: v.folders.map((folder) =>
+          folder.id === dir ? { ...folder, files: [newFile, ...folder.files] } : folder
+        ),
+      };
+    });
     pickFile(newFile.id);
   };
 

@@ -47,7 +47,7 @@ function FileRow({ file, active, accent, onClick }) {
   );
 }
 
-function FolderGroup({ folder, activeFileId, accent, onPickFile }) {
+function FolderGroup({ folder, activeFileId, accent, onPickFile, onNewFile }) {
   const [open, setOpen] = React.useState(true);
   return (
     <div className="folder-group">
@@ -55,6 +55,13 @@ function FolderGroup({ folder, activeFileId, accent, onPickFile }) {
         <span className={`folder-caret ${open ? "is-open" : ""}`}>▸</span>
         <span className="folder-name">{folder.name}</span>
         <span className="folder-count">{folder.files.length}</span>
+        <span
+          className="icon-btn folder-new-btn"
+          title="Novo arquivo"
+          onClick={(e) => { e.stopPropagation(); onNewFile(folder.id); }}
+        >
+          +
+        </span>
       </button>
       {open ? (
         <div className="folder-files">
@@ -117,6 +124,7 @@ function Sidebar({ vault, activeFileId, accent, onPickFile, onNewFile, onChangeV
             activeFileId={activeFileId}
             accent={accent}
             onPickFile={onPickFile}
+            onNewFile={onNewFile}
           />
         ))}
       </div>
