@@ -10,8 +10,8 @@ app.use(express.static(path.join(__dirname, "..", "public")));
 // ── helpers ──────────────────────────────────────────────────────────────────
 
 function resolveSafe(vaultPath, filePath) {
-  const vault = path.resolve(vaultPath);
-  const full = path.resolve(filePath);
+  const vault = fs.realpathSync(vaultPath);
+  const full = fs.realpathSync(filePath);
   if (!full.startsWith(vault + path.sep) && full !== vault) {
     throw new Error("path outside vault");
   }
@@ -39,20 +39,30 @@ function formatMtime(mtime) {
 
 // ── GET /api/vault?path= ─────────────────────────────────────────────────────
 
-app.get("/api/vault", (req, res) => {
+app.get("/api/vault", async (req, res) => {
   const vaultPath = req.query.path;
   if (!vaultPath) return res.status(400).json({ error: "path required" });
 
   const vault = path.resolve(vaultPath);
-  if (!fs.existsSync(vault)) return res.status(404).json({ error: "path not found" });
-
-  const stat = fs.statSync(vault);
-  if (!stat.isDirectory()) return res.status(400).json({ error: "not a directory" });
+  try {
+    const vaultStat = await fs.promises.stat(vault);
+    if (!vaultStat.isDirectory()) return res.status(400).json({ error: "not a directory" });
+  } catch {
+    return res.status(404).json({ error: "path not found" });
+  }
 
   const result = { name: path.basename(vault), folders: [], rootFiles: [] };
-  const entries = fs.readdirSync(vault, { withFileTypes: true });
+  let entries;
+  try {
+    entries = await fs.promises.readdir(vault, { withFileTypes: true });
+  } catch {
+    return res.status(500).json({ error: "unable to read vault" });
+  }
 
   const SKIP_DIRS = new Set(["node_modules", ".git", ".obsidian", "__pycache__", ".DS_Store"]);
+
+  const folderPromises = [];
+  const rootFilePromises = [];
 
   for (const entry of entries) {
     if (entry.name.startsWith(".")) continue;
@@ -61,33 +71,60 @@ app.get("/api/vault", (req, res) => {
 
     if (entry.isDirectory()) {
       const folder = { id: entry.name, name: entry.name, files: [] };
-      const subEntries = fs.readdirSync(full, { withFileTypes: true });
-      for (const sub of subEntries) {
-        if (sub.name.startsWith(".") || !sub.name.endsWith(".md")) continue;
-        const subFull = path.join(full, sub.name);
-        const subStat = fs.statSync(subFull);
-        folder.files.push({
-          id: relPath(vault, subFull),
-          name: sub.name,
-          updated: formatMtime(subStat.mtimeMs),
-          content: fs.readFileSync(subFull, "utf8"),
-          comments: [],
-        });
-      }
       result.folders.push(folder);
+      folderPromises.push(
+        (async () => {
+          let subEntries;
+          try {
+            subEntries = await fs.promises.readdir(full, { withFileTypes: true });
+          } catch {
+            return;
+          }
+          const fileReads = [];
+          for (const sub of subEntries) {
+            if (sub.name.startsWith(".") || !sub.name.endsWith(".md")) continue;
+            const subFull = path.join(full, sub.name);
+            fileReads.push(
+              (async () => {
+                try {
+                  const subStat = await fs.promises.stat(subFull);
+                  const content = await fs.promises.readFile(subFull, "utf8");
+                  folder.files.push({
+                    id: relPath(vault, subFull),
+                    name: sub.name,
+                    updated: formatMtime(subStat.mtimeMs),
+                    content,
+                    comments: [],
+                  });
+                } catch {}
+              })()
+            );
+          }
+          await Promise.all(fileReads);
+        })()
+      );
     } else if (entry.isFile() && entry.name.endsWith(".md")) {
-      const s = fs.statSync(full);
-      result.rootFiles.push({
-        id: relPath(vault, full),
-        name: entry.name,
-        updated: formatMtime(s.mtimeMs),
-        content: fs.readFileSync(full, "utf8"),
-        comments: [],
-      });
+      rootFilePromises.push(
+        (async () => {
+          try {
+            const s = await fs.promises.stat(full);
+            const content = await fs.promises.readFile(full, "utf8");
+            result.rootFiles.push({
+              id: relPath(vault, full),
+              name: entry.name,
+              updated: formatMtime(s.mtimeMs),
+              content,
+              comments: [],
+            });
+          } catch {}
+        })()
+      );
     }
   }
 
-  // Inject comments from .tasklist-comments.json
+  await Promise.all([...folderPromises, ...rootFilePromises]);
+
+  // Inject comments from .tasklist-comments.json and prune orphans
   const commentsFile = path.join(vault, ".tasklist-comments.json");
   if (fs.existsSync(commentsFile)) {
     try {
@@ -95,6 +132,19 @@ app.get("/api/vault", (req, res) => {
       const inject = (file) => { file.comments = map[file.id] || []; };
       result.rootFiles.forEach(inject);
       result.folders.forEach((f) => f.files.forEach(inject));
+
+      const existingIds = new Set(result.rootFiles.map((f) => f.id));
+      result.folders.forEach((f) => f.files.forEach((file) => existingIds.add(file.id)));
+      let pruned = false;
+      for (const key of Object.keys(map)) {
+        if (!existingIds.has(key)) {
+          delete map[key];
+          pruned = true;
+        }
+      }
+      if (pruned) {
+        fs.writeFileSync(commentsFile, JSON.stringify(map, null, 2), "utf8");
+      }
     } catch {}
   }
 
@@ -121,6 +171,9 @@ app.get("/api/file", (req, res) => {
 app.put("/api/file", (req, res) => {
   const { vault: vaultPath, path: filePath, content } = req.body;
   if (!filePath || !vaultPath) return res.status(400).json({ error: "vault and path required" });
+  if (!filePath.endsWith(".md")) return res.status(400).json({ error: "only .md files allowed" });
+  const MAX_SIZE = 5 * 1024 * 1024;
+  if (content != null && content.length > MAX_SIZE) return res.status(413).json({ error: "content too large" });
   try {
     const full = resolveSafe(vaultPath, path.resolve(vaultPath, filePath));
     fs.writeFileSync(full, content, "utf8");
@@ -140,7 +193,7 @@ app.post("/api/file", (req, res) => {
   const dir2 = dir || "";
   try {
     const dirFull = resolveSafe(vaultPath, path.resolve(vaultPath, dir2));
-    const fileFull = path.join(dirFull, fileName);
+    const fileFull = resolveSafe(vaultPath, path.join(dirFull, fileName));
     if (fs.existsSync(fileFull)) return res.status(409).json({ error: "file exists" });
     fs.writeFileSync(fileFull, `# ${fileName.replace(/\.md$/, "")}\n\n- [ ] primeira task\n`, "utf8");
     const rel = relPath(vaultPath, fileFull);
@@ -244,9 +297,22 @@ app.get("/api/watch", (req, res) => {
     send("remove", { path: relPath(vault, filePath) });
   });
 
-  req.on("close", () => {
+  const cleanup = () => {
     watcher.close();
-  });
+    watchers.delete(req);
+    clearInterval(heartbeat);
+  };
+
+  watchers.set(req, watcher);
+  const heartbeat = setInterval(() => {
+    try {
+      res.write(":ping\n\n");
+    } catch {
+      cleanup();
+    }
+  }, 30000);
+
+  req.on("close", cleanup);
 });
 
 // ── start ────────────────────────────────────────────────────────────────────

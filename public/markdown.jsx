@@ -67,7 +67,7 @@ window.parseMarkdown = function parseMarkdown(text) {
       buf.push(lines[i]);
       i++;
     }
-    blocks.push({ kind: "para", text: buf.join(" "), lineIdx: start });
+    blocks.push({ kind: "para", text: buf.join("\n"), lineIdx: start });
   }
 
   return blocks;
