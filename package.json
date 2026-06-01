@@ -1,14 +1,28 @@
 {
   "name": "plan-list",
   "version": "1.0.0",
+  "description": "A lightweight markdown task-list app with a post-it board view. Files are stored as plain .md on disk.",
+  "main": "src/server.js",
   "scripts": {
-    "start": "node server.js"
+    "start": "node src/server.js",
+    "test": "node --test src/*.test.js"
   },
-  "main": "server.js",
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "description": "",
+  "repository": {
+    "type": "git",
+    "url": "git@github.com:marco-ostaska/plan-list.git"
+  },
+  "keywords": [
+    "markdown",
+    "task-list",
+    "productivity",
+    "express",
+    "react"
+  ],
+  "author": "marco-ostaska",
+  "license": "MIT",
+  "engines": {
+    "node": ">=18.0.0"
+  },
   "dependencies": {
     "chokidar": "^5.0.0",
     "express": "^5.2.1"

@@ -1,2 +1,34 @@
+# Dependencies
 node_modules/
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+
+# Runtime data
+*.log
+logs/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Editor / AI tool directories
+.claude/
+.codex/
+.opencode/
+.vscode/
+.idea/
+
+# App-specific
 .tasklist-comments.json
+docs/
+CLAUDE.md
+.guardrails-allowlist
