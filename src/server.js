@@ -39,40 +39,26 @@ function formatMtime(mtime) {
 
 // ── GET /api/vault?path= ─────────────────────────────────────────────────────
 
-app.get("/api/vault", async (req, res) => {
-  const vaultPath = req.query.path;
-  if (!vaultPath) return res.status(400).json({ error: "path required" });
-
-  const vault = path.resolve(vaultPath);
-  try {
-    const vaultStat = await fs.promises.stat(vault);
-    if (!vaultStat.isDirectory()) return res.status(400).json({ error: "not a directory" });
-  } catch {
-    return res.status(404).json({ error: "path not found" });
-  }
-
-  const result = { name: path.basename(vault), folders: [], rootFiles: [] };
+async function scanVaultAsync(vault, currentDir, depth, maxDepth, result, skipDirs) {
   let entries;
   try {
-    entries = await fs.promises.readdir(vault, { withFileTypes: true });
+    entries = await fs.promises.readdir(currentDir, { withFileTypes: true });
   } catch {
-    return res.status(500).json({ error: "unable to read vault" });
+    return;
   }
 
-  const SKIP_DIRS = new Set(["node_modules", ".git", ".obsidian", "__pycache__", ".DS_Store"]);
-
-  const folderPromises = [];
-  const rootFilePromises = [];
+  const fileReads = [];
 
   for (const entry of entries) {
     if (entry.name.startsWith(".")) continue;
-    if (SKIP_DIRS.has(entry.name)) continue;
-    const full = path.join(vault, entry.name);
+    if (skipDirs.has(entry.name)) continue;
+    const full = path.join(currentDir, entry.name);
 
-    if (entry.isDirectory()) {
-      const folder = { id: entry.name, name: entry.name, files: [] };
+    if (entry.isDirectory() && depth < maxDepth) {
+      const rel = relPath(vault, full);
+      const folder = { id: rel, name: entry.name, files: [] };
       result.folders.push(folder);
-      folderPromises.push(
+      fileReads.push(
         (async () => {
           let subEntries;
           try {
@@ -80,56 +66,33 @@ app.get("/api/vault", async (req, res) => {
           } catch {
             return;
           }
-          const fileReads = [];
+          const subReads = [];
           for (const sub of subEntries) {
-            if (sub.name.startsWith(".")) continue;
+            if (sub.name.startsWith(".") || !sub.name.endsWith(".md")) continue;
             const subFull = path.join(full, sub.name);
-            if (sub.isFile() && sub.name.endsWith(".md")) {
-              fileReads.push(
-                (async () => {
-                  try {
-                    const subStat = await fs.promises.stat(subFull);
-                    const content = await fs.promises.readFile(subFull, "utf8");
-                    folder.files.push({
-                      id: relPath(vault, subFull),
-                      name: sub.name,
-                      updated: formatMtime(subStat.mtimeMs),
-                      content,
-                      comments: [],
-                    });
-                  } catch {}
-                })()
-              );
-            } else if (sub.isDirectory()) {
-              try {
-                const nestedEntries = await fs.promises.readdir(subFull, { withFileTypes: true });
-                for (const nested of nestedEntries) {
-                  if (nested.name.startsWith(".") || !nested.name.endsWith(".md")) continue;
-                  const nestedFull = path.join(subFull, nested.name);
-                  fileReads.push(
-                    (async () => {
-                      try {
-                        const nestedStat = await fs.promises.stat(nestedFull);
-                        const content = await fs.promises.readFile(nestedFull, "utf8");
-                        folder.files.push({
-                          id: relPath(vault, nestedFull),
-                          name: `${sub.name}/${nested.name}`,
-                          updated: formatMtime(nestedStat.mtimeMs),
-                          content,
-                          comments: [],
-                        });
-                      } catch {}
-                    })()
-                  );
-                }
-              } catch {}
-            }
+            subReads.push(
+              (async () => {
+                try {
+                  const subStat = await fs.promises.stat(subFull);
+                  const content = await fs.promises.readFile(subFull, "utf8");
+                  folder.files.push({
+                    id: relPath(vault, subFull),
+                    name: sub.name,
+                    updated: formatMtime(subStat.mtimeMs),
+                    content,
+                    comments: [],
+                  });
+                } catch {}
+              })()
+            );
           }
-          await Promise.all(fileReads);
+          await Promise.all(subReads);
+          // recurse deeper
+          await scanVaultAsync(vault, full, depth + 1, maxDepth, result, skipDirs);
         })()
       );
-    } else if (entry.isFile() && entry.name.endsWith(".md")) {
-      rootFilePromises.push(
+    } else if (entry.isFile() && entry.name.endsWith(".md") && depth === 0) {
+      fileReads.push(
         (async () => {
           try {
             const s = await fs.promises.stat(full);
@@ -147,7 +110,25 @@ app.get("/api/vault", async (req, res) => {
     }
   }
 
-  await Promise.all([...folderPromises, ...rootFilePromises]);
+  await Promise.all(fileReads);
+}
+
+app.get("/api/vault", async (req, res) => {
+  const vaultPath = req.query.path;
+  if (!vaultPath) return res.status(400).json({ error: "path required" });
+
+  const vault = path.resolve(vaultPath);
+  try {
+    const vaultStat = await fs.promises.stat(vault);
+    if (!vaultStat.isDirectory()) return res.status(400).json({ error: "not a directory" });
+  } catch {
+    return res.status(404).json({ error: "path not found" });
+  }
+
+  const result = { name: path.basename(vault), folders: [], rootFiles: [] };
+  const SKIP_DIRS = new Set(["node_modules", ".git", ".obsidian", "__pycache__", ".DS_Store"]);
+
+  await scanVaultAsync(vault, vault, 0, 3, result, SKIP_DIRS);
 
   // Inject comments from .tasklist-comments.json and prune orphans
   const commentsFile = path.join(vault, ".tasklist-comments.json");
@@ -305,7 +286,7 @@ app.get("/api/watch", (req, res) => {
   const watcher = chokidar.watch(vault, {
     ignored: /(^|[/\\])\.(?!tasklist)/,
     ignoreInitial: true,
-    depth: 2,
+    depth: 3,
   });
 
   const send = (event, data) => {
