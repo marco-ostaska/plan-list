@@ -7,10 +7,12 @@ const { useState, useEffect, useRef, useCallback } = React;
 
 function useDebounce(fn, delay) {
   const timer = useRef(null);
+  const fnRef = useRef(fn);
+  fnRef.current = fn;
   return useCallback((...args) => {
     clearTimeout(timer.current);
-    timer.current = setTimeout(() => fn(...args), delay);
-  }, [fn, delay]);
+    timer.current = setTimeout(() => fnRef.current(...args), delay);
+  }, [delay]);
 }
 
 // ── ViewToggle ───────────────────────────────────────────────────────────────
@@ -195,14 +197,21 @@ function App() {
 
   const activeFileIdRef = useRef(activeFileId);
   activeFileIdRef.current = activeFileId;
+  const isDirtyRef = useRef(false);
 
   useEffect(() => {
     if (!vaultPath) return;
     const es = new EventSource(`/api/watch?path=${encodeURIComponent(vaultPath)}`);
 
     es.addEventListener("change", (e) => {
-      const { path: changed } = JSON.parse(e.data);
-      if (changed === activeFileIdRef.current) {
+      let changed;
+      try {
+        const data = JSON.parse(e.data);
+        changed = data.path;
+      } catch {
+        return;
+      }
+      if (changed === activeFileIdRef.current && !isDirtyRef.current) {
         fetch(`/api/file?vault=${encodeURIComponent(vaultPath)}&path=${encodeURIComponent(changed)}`)
           .then((r) => r.json())
           .then((d) => { setFileContent(d.content); setFileUpdated(d.updated); })
@@ -217,13 +226,20 @@ function App() {
 
   // ── File selection ─────────────────────────────────────────────────────────
 
+  const pickFileAbortRef = useRef(null);
+
   const pickFile = useCallback((fileId) => {
     setActiveFileId(fileId);
     if (!vaultPath) return;
-    fetch(`/api/file?vault=${encodeURIComponent(vaultPath)}&path=${encodeURIComponent(fileId)}`)
+    if (pickFileAbortRef.current) {
+      pickFileAbortRef.current.abort();
+    }
+    const controller = new AbortController();
+    pickFileAbortRef.current = controller;
+    fetch(`/api/file?vault=${encodeURIComponent(vaultPath)}&path=${encodeURIComponent(fileId)}`, { signal: controller.signal })
       .then((r) => r.json())
       .then((d) => { setFileContent(d.content); setFileUpdated(d.updated); })
-      .catch(() => {});
+      .catch((err) => { if (err.name !== "AbortError") { /* ignore */ } });
   }, [vaultPath]);
 
   // ── Content save (debounced 800ms) ─────────────────────────────────────────
@@ -234,12 +250,16 @@ function App() {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ vault: vaultPath, path: fileId, content }),
-    }).then((r) => r.json()).then((d) => { if (d.updated) setFileUpdated(d.updated); }).catch(() => {});
+    }).then((r) => r.json()).then((d) => {
+      if (d.updated) setFileUpdated(d.updated);
+      isDirtyRef.current = false;
+    }).catch(() => {});
   }, [vaultPath]);
 
   const debouncedPersist = useDebounce(persistContent, 800);
 
   const handleContentChange = (newContent) => {
+    isDirtyRef.current = true;
     setFileContent(newContent);
     setVault((v) => {
       if (!v) return v;
