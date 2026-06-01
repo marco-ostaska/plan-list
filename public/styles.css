@@ -142,6 +142,7 @@ textarea, input {
   border-right: 1px solid var(--line);
   background: var(--bg-panel);
   min-width: 0;
+  min-height: 0;
 }
 
 .sidebar-head {
@@ -352,6 +353,7 @@ textarea, input {
   display: flex;
   flex-direction: column;
   min-width: 0;
+  min-height: 0;
   background: var(--bg);
 }
 
