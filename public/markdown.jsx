@@ -138,26 +138,47 @@ function parseTableRow(line) {
   return line.trim().replace(/^\|/, "").replace(/\|$/, "").split("|").map((cell) => cell.trim());
 }
 
-// Inline decorations: tags (#foo) and dates (@today / @sexta / @maio)
-window.renderInline = function renderInline(text) {
-  const parts = [];
-  const regex = /(#[\p{L}\p{N}\-_]+)|(@[\p{L}\p{N}\-_:]+)/gu;
+// Inline decorations: strong, code, line breaks, tags (#foo), and dates (@today / @sexta / @maio)
+window.parseInlineMarkdown = function parseInlineMarkdown(text) {
+  const tokens = [];
+  const regex = /(\*\*([^*\n]+)\*\*)|(`([^`\n]+)`)|(#[\p{L}\p{N}\-_]+)|(@[\p{L}\p{N}\-_:]+)|(\n)/gu;
   let last = 0;
   let match;
-  let key = 0;
+
   while ((match = regex.exec(text)) !== null) {
     if (match.index > last) {
-      parts.push(text.slice(last, match.index));
+      tokens.push({ kind: "text", text: text.slice(last, match.index) });
     }
-    if (match[1]) {
-      parts.push(<span key={key++} className="md-tag">{match[1]}</span>);
-    } else if (match[2]) {
-      parts.push(<span key={key++} className="md-date">{match[2]}</span>);
+    if (match[2]) {
+      tokens.push({ kind: "strong", text: match[2] });
+    } else if (match[4]) {
+      tokens.push({ kind: "code", text: match[4] });
+    } else if (match[5]) {
+      tokens.push({ kind: "tag", text: match[5] });
+    } else if (match[6]) {
+      tokens.push({ kind: "date", text: match[6] });
+    } else if (match[7]) {
+      tokens.push({ kind: "br" });
     }
     last = regex.lastIndex;
   }
-  if (last < text.length) parts.push(text.slice(last));
-  return parts;
+
+  if (last < text.length) {
+    tokens.push({ kind: "text", text: text.slice(last) });
+  }
+
+  return tokens;
+};
+
+window.renderInline = function renderInline(text) {
+  return window.parseInlineMarkdown(text).map((token, key) => {
+    if (token.kind === "strong") return <strong key={key} className="md-strong">{token.text}</strong>;
+    if (token.kind === "code") return <code key={key} className="md-inline-code">{token.text}</code>;
+    if (token.kind === "tag") return <span key={key} className="md-tag">{token.text}</span>;
+    if (token.kind === "date") return <span key={key} className="md-date">{token.text}</span>;
+    if (token.kind === "br") return <br key={key} />;
+    return token.text;
+  });
 };
 
 // Extract all tasks from a file (for post-it view and progress)

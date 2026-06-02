@@ -3,12 +3,16 @@ const fs = require("fs");
 const path = require("path");
 const vm = require("vm");
 
-function loadMarkdownParser() {
+function loadMarkdownModule() {
   const source = fs.readFileSync(path.join(__dirname, "..", "public", "markdown.jsx"), "utf8");
-  const parserSource = source.split("// Inline decorations")[0];
+  const parserSource = source.split("window.renderInline")[0];
   const sandbox = { window: {} };
   vm.runInNewContext(parserSource, sandbox);
-  return sandbox.window.parseMarkdown;
+  return sandbox.window;
+}
+
+function loadMarkdownParser() {
+  return loadMarkdownModule().parseMarkdown;
 }
 
 function extractTasksFromBlocks(blocks) {
@@ -78,7 +82,23 @@ function testParagraphStopsBeforeTable() {
   assert.strictEqual(blocks[1].kind, "table");
 }
 
+function testParseInlineFormatting() {
+  const markdown = loadMarkdownModule();
+  const tokens = markdown.parseInlineMarkdown("**Data source:** `docs/personal.csv`\n**Job:** `pa-delete-account`");
+
+  assert.deepStrictEqual(sameRealm(tokens), [
+    { kind: "strong", text: "Data source:" },
+    { kind: "text", text: " " },
+    { kind: "code", text: "docs/personal.csv" },
+    { kind: "br" },
+    { kind: "strong", text: "Job:" },
+    { kind: "text", text: " " },
+    { kind: "code", text: "pa-delete-account" },
+  ]);
+}
+
 testParseMarkdownCodeFence();
 testParseMarkdownTable();
 testExtractTasksAroundAdvancedBlocks();
 testParagraphStopsBeforeTable();
+testParseInlineFormatting();

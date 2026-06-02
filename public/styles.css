@@ -568,6 +568,20 @@ textarea, input {
 }
 .md-p:hover { background: var(--line-soft); }
 
+.md-strong {
+  font-weight: 600;
+  color: var(--ink);
+}
+.md-inline-code {
+  font-family: var(--font-mono);
+  font-size: 0.88em;
+  background: var(--line-soft);
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  padding: 1px 5px;
+  color: var(--ink-soft);
+}
+
 .md-code-block {
   position: relative;
   margin: 12px -4px 16px;
