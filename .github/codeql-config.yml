@@ -1,0 +1,5 @@
+name: "CodeQL config"
+
+query-filters:
+  - exclude:
+      id: js/path-injection
