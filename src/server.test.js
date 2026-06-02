@@ -7,11 +7,16 @@ const path = require("path");
 process.env.PLAN_LIST_VAULT_ROOT = os.tmpdir();
 
 const {
+  apiLimiter,
   getVaultPath,
   resolveVaultPath,
   resolveExistingVaultPath,
   safeMarkdownFileName,
 } = require("./server");
+
+test("server exports the API rate limiter middleware", () => {
+  assert.equal(typeof apiLimiter, "function");
+});
 
 test("getVaultPath returns a canonical directory under the allowed root", () => {
   const vault = fs.mkdtempSync(path.join(os.tmpdir(), "plan-list-vault-"));
