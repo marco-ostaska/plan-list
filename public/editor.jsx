@@ -1,5 +1,5 @@
 // Editor: renders parsed markdown. Tasks are interactive checkboxes.
-// Each block is editable on click (becomes a textarea in place).
+// Blocks use double-click editing so normal click/drag still supports copying text.
 
 function EditableBlock({ block, onUpdate, onToggleTask, onContinue, autoFocus }) {
   const [editing, setEditing] = React.useState(!!autoFocus);
@@ -56,7 +56,7 @@ function EditableBlock({ block, onUpdate, onToggleTask, onContinue, autoFocus })
   if (block.kind === "heading") {
     const Tag = `h${block.level}`;
     return (
-      <Tag className={`md-h md-h-${block.level}`} onClick={startEdit}>
+      <Tag className={`md-h md-h-${block.level}`} onDoubleClick={startEdit}>
         {window.renderInline(block.text)}
       </Tag>
     );
@@ -83,7 +83,7 @@ function EditableBlock({ block, onUpdate, onToggleTask, onContinue, autoFocus })
             </svg>
           ) : null}
         </button>
-        <span className="md-task-text" onClick={startEdit}>
+        <span className="md-task-text" onDoubleClick={startEdit}>
           {window.renderInline(block.text)}
         </span>
       </div>
@@ -92,7 +92,7 @@ function EditableBlock({ block, onUpdate, onToggleTask, onContinue, autoFocus })
 
   if (block.kind === "bullet") {
     return (
-      <div className="md-bullet" style={{ marginLeft: block.indent * 12 }} onClick={startEdit}>
+      <div className="md-bullet" style={{ marginLeft: block.indent * 12 }} onDoubleClick={startEdit}>
         <span className="md-bullet-dot">•</span>
         <span>{window.renderInline(block.text)}</span>
       </div>
@@ -101,7 +101,7 @@ function EditableBlock({ block, onUpdate, onToggleTask, onContinue, autoFocus })
 
   if (block.kind === "para") {
     return (
-      <p className="md-p" onClick={startEdit}>
+      <p className="md-p" onDoubleClick={startEdit}>
         {window.renderInline(block.text)}
       </p>
     );
@@ -109,7 +109,7 @@ function EditableBlock({ block, onUpdate, onToggleTask, onContinue, autoFocus })
 
   if (block.kind === "code") {
     return (
-      <div className="md-code-block" onClick={startEdit}>
+      <div className="md-code-block" onDoubleClick={startEdit}>
         {block.lang ? <div className="md-code-lang">{block.lang}</div> : null}
         <pre className="md-code"><code>{block.text}</code></pre>
       </div>
@@ -118,7 +118,7 @@ function EditableBlock({ block, onUpdate, onToggleTask, onContinue, autoFocus })
 
   if (block.kind === "table") {
     return (
-      <div className="md-table-wrap" onClick={startEdit}>
+      <div className="md-table-wrap" onDoubleClick={startEdit}>
         <table className="md-table">
           <thead>
             <tr>{block.headers.map((cell, i) => <th key={i}>{window.renderInline(cell)}</th>)}</tr>
@@ -134,7 +134,7 @@ function EditableBlock({ block, onUpdate, onToggleTask, onContinue, autoFocus })
   }
 
   if (block.kind === "hr") {
-    return <hr className="md-hr" onClick={startEdit} />;
+    return <hr className="md-hr" onDoubleClick={startEdit} />;
   }
 
   if (block.kind === "blank") {
