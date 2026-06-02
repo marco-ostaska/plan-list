@@ -1,23 +1,23 @@
 :root {
-  /* Palette — papel (default) — warm off-white, cool-leaning text (per speckit-tracker light) */
-  --bg: #f0ede8;
-  --bg-panel: #f7f5f1;
-  --bg-paper: #fdfbf7;
-  --bg-paper-edge: #e9e6e0;
-  --ink: #26272c;
-  --ink-soft: #585b64;
-  --ink-mute: #87898f;
-  --ink-faint: #b0b2b8;
-  --line: #dcdad4;
-  --line-soft: #e6e3de;
-  --accent: #7080c8;
-  --accent-soft: rgba(112, 128, 200, 0.12);
-  --shadow-sm: 0 1px 0 rgba(30, 30, 40, 0.04), 0 2px 8px rgba(30, 30, 40, 0.05);
-  --shadow-md: 0 4px 14px rgba(30, 30, 40, 0.08), 0 1px 0 rgba(30, 30, 40, 0.04);
-  --shadow-paper: 0 1px 0 rgba(30, 30, 40, 0.04), 0 8px 24px rgba(30, 30, 40, 0.06);
+  /* Palette — neutral workbench */
+  --bg: #f6f7f8;
+  --bg-panel: #ffffff;
+  --bg-paper: #ffffff;
+  --bg-paper-edge: #e5e7eb;
+  --ink: #111827;
+  --ink-soft: #374151;
+  --ink-mute: #6b7280;
+  --ink-faint: #9ca3af;
+  --line: #d1d5db;
+  --line-soft: #e5e7eb;
+  --accent: #2563eb;
+  --accent-soft: rgba(37, 99, 235, 0.10);
+  --shadow-sm: 0 1px 2px rgba(17, 24, 39, 0.05);
+  --shadow-md: 0 6px 18px rgba(17, 24, 39, 0.08);
+  --shadow-paper: 0 1px 2px rgba(17, 24, 39, 0.05);
 
-  --font-display: "Instrument Serif", "Iowan Old Style", "Charter", Georgia, serif;
-  --font-ui: "Plus Jakarta Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+  --font-ui: "Plus Jakarta Sans", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
+  --font-display: var(--font-ui);
   --font-mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, monospace;
 
   --radius-sm: 6px;
@@ -48,23 +48,23 @@
   --line-h: 1.7;
 }
 
-/* Aesthetic: limpo (neutral white, no warmth) */
+/* Aesthetic: limpo (white workspace) */
 :root[data-aesthetic="limpo"] {
-  --bg: #f4f4f2;
-  --bg-panel: #fafafa;
+  --bg: #ffffff;
+  --bg-panel: #ffffff;
   --bg-paper: #ffffff;
-  --bg-paper-edge: #ebebea;
-  --ink: #1f2028;
-  --ink-soft: #52566a;
-  --ink-mute: #838796;
-  --ink-faint: #b4b7c4;
-  --line: #e2e2e0;
-  --line-soft: #eaeae8;
-  --accent: #7080c8;
-  --accent-soft: rgba(112, 128, 200, 0.1);
-  --shadow-sm: 0 1px 2px rgba(0,0,0,0.04);
-  --shadow-md: 0 4px 12px rgba(0,0,0,0.06);
-  --shadow-paper: 0 1px 2px rgba(0,0,0,0.04), 0 8px 24px rgba(0,0,0,0.04);
+  --bg-paper-edge: #edf0f3;
+  --ink: #111827;
+  --ink-soft: #374151;
+  --ink-mute: #6b7280;
+  --ink-faint: #a1a8b3;
+  --line: #d8dee6;
+  --line-soft: #eef1f4;
+  --accent: #0f766e;
+  --accent-soft: rgba(15, 118, 110, 0.10);
+  --shadow-sm: 0 1px 2px rgba(17,24,39,0.04);
+  --shadow-md: 0 4px 14px rgba(17,24,39,0.06);
+  --shadow-paper: none;
 }
 
 /* Aesthetic: mono (dark, speckit-tracker-inspired charcoal) */
@@ -79,8 +79,8 @@
   --ink-faint: #3e4149;
   --line: #272a31;
   --line-soft: #21232a;
-  --accent: #8b93e8;
-  --accent-soft: rgba(139, 147, 232, 0.18);
+  --accent: #60a5fa;
+  --accent-soft: rgba(96, 165, 250, 0.16);
   --shadow-sm: 0 1px 0 rgba(0,0,0,0.3);
   --shadow-md: 0 4px 12px rgba(0,0,0,0.4);
   --shadow-paper: 0 4px 16px rgba(0,0,0,0.5);
@@ -157,9 +157,10 @@ textarea, input {
   display: flex;
   align-items: center;
   gap: 8px;
-  font-family: var(--font-display);
-  font-size: 18px;
-  letter-spacing: -0.01em;
+  font-family: var(--font-ui);
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: 0;
   color: var(--ink);
   min-width: 0;
   overflow: hidden;
@@ -383,9 +384,10 @@ textarea, input {
 }
 .fh-crumb.fh-current {
   color: var(--ink);
-  font-family: var(--font-display);
-  font-size: 22px;
-  letter-spacing: -0.01em;
+  font-family: var(--font-ui);
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: 0;
   cursor: text;
   padding: 0 2px;
   border-radius: 4px;
@@ -396,9 +398,10 @@ textarea, input {
 }
 
 .fh-rename-input {
-  font-family: var(--font-display);
-  font-size: 22px;
-  letter-spacing: -0.01em;
+  font-family: var(--font-ui);
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: 0;
   color: var(--ink);
   background: var(--bg-paper);
   border: 1px solid var(--accent);
@@ -520,10 +523,10 @@ textarea, input {
 /* Ruled lines removed — they cause visual fatigue in daily use */
 
 .md-h {
-  font-family: var(--font-display);
-  letter-spacing: -0.015em;
+  font-family: var(--font-ui);
+  letter-spacing: 0;
   color: var(--ink);
-  font-weight: 400;
+  font-weight: 700;
   cursor: text;
   border-radius: 4px;
   padding: 2px 4px;
@@ -532,20 +535,20 @@ textarea, input {
 }
 .md-h:hover { background: var(--line-soft); }
 .md-h-1 {
-  font-size: 36px;
-  margin: 12px -4px 18px;
-  line-height: 1.15;
+  font-size: 28px;
+  margin: 10px -4px 16px;
+  line-height: 1.2;
 }
 .md-h-2 {
-  font-size: 24px;
-  margin: 28px -4px 10px;
-  line-height: 1.2;
+  font-size: 20px;
+  margin: 26px -4px 10px;
+  line-height: 1.25;
   color: var(--ink-soft);
 }
 .md-h-3 {
-  font-size: 18px;
+  font-size: 16px;
   margin: 20px -4px 8px;
-  line-height: 1.25;
+  line-height: 1.3;
   color: var(--ink-soft);
 }
 
@@ -567,6 +570,88 @@ textarea, input {
   text-wrap: pretty;
 }
 .md-p:hover { background: var(--line-soft); }
+
+.md-strong {
+  font-weight: 600;
+  color: var(--ink);
+}
+.md-inline-code {
+  font-family: var(--font-mono);
+  font-size: 0.88em;
+  background: var(--line-soft);
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  padding: 1px 5px;
+  color: var(--ink-soft);
+}
+
+.md-code-block {
+  position: relative;
+  margin: 12px -4px 16px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--bg);
+  overflow: hidden;
+  cursor: text;
+}
+.md-code-block:hover {
+  border-color: var(--ink-faint);
+}
+.md-code-lang {
+  padding: 5px 10px;
+  border-bottom: 1px solid var(--line-soft);
+  color: var(--ink-mute);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.md-code {
+  margin: 0;
+  padding: 12px 14px;
+  overflow-x: auto;
+  color: var(--ink);
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+  line-height: 1.6;
+  white-space: pre;
+}
+
+.md-table-wrap {
+  margin: 12px -4px 16px;
+  overflow-x: auto;
+  cursor: text;
+  border-radius: var(--radius-sm);
+}
+.md-table-wrap:hover {
+  background: var(--line-soft);
+}
+.md-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: var(--bg-paper);
+  border: 1px solid var(--line);
+  font-size: 13px;
+}
+.md-table th,
+.md-table td {
+  border: 1px solid var(--line);
+  padding: 7px 9px;
+  text-align: left;
+  vertical-align: top;
+}
+.md-table th {
+  background: var(--bg-panel);
+  color: var(--ink-soft);
+  font-weight: 600;
+}
+
+.md-hr {
+  border: 0;
+  border-top: 1px solid var(--line);
+  margin: 18px 0;
+  cursor: text;
+}
 
 .md-bullet {
   display: flex;
@@ -708,9 +793,6 @@ textarea, input {
 .postit-board {
   padding: 32px max(20px, calc(var(--content-pad) - 16px)) 60px;
   background-color: var(--bg);
-  background-image:
-    radial-gradient(circle at 20% 30%, rgba(180,150,100,0.05) 0, transparent 50%),
-    radial-gradient(circle at 80% 70%, rgba(180,150,100,0.04) 0, transparent 50%);
   min-height: 100%;
   display: flex;
   flex-direction: column;
@@ -733,12 +815,12 @@ textarea, input {
 }
 
 .postit-section-title {
-  font-family: var(--font-display);
-  font-size: 22px;
-  font-weight: 400;
+  font-family: var(--font-ui);
+  font-size: 17px;
+  font-weight: 700;
   color: var(--ink);
   margin: 0;
-  letter-spacing: -0.01em;
+  letter-spacing: 0;
 }
 .postit-section-title--ghost {
   color: var(--ink-mute);
@@ -766,8 +848,9 @@ textarea, input {
   padding: 8px 16px;
   border-radius: var(--radius-sm);
   border: 1px dashed var(--line);
-  font-family: var(--font-display);
-  letter-spacing: -0.01em;
+  font-family: var(--font-ui);
+  font-weight: 600;
+  letter-spacing: 0;
   transition: background 0.1s, color 0.1s, border-color 0.1s;
 }
 .postit-add-section:hover {
@@ -784,12 +867,12 @@ textarea, input {
   padding: 5px 14px;
   border-radius: var(--radius-sm);
   border: 1px solid var(--line);
-  background: rgba(255,255,255,0.5);
+  background: var(--bg-panel);
   font-style: normal;
   transition: background 0.1s, color 0.1s;
 }
 .postit-empty-add:hover {
-  background: white;
+  background: var(--bg-paper);
   color: var(--ink);
 }
 
@@ -802,41 +885,27 @@ textarea, input {
 }
 
 .postit {
-  background: var(--postit-bg);
-  color: var(--postit-ink);
-  padding: 22px 16px 16px;
-  border-radius: 2px;
+  background: var(--bg-panel);
+  color: var(--ink);
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
   position: relative;
-  box-shadow:
-    0 1px 1px rgba(0,0,0,0.06),
-    0 4px 12px rgba(60, 50, 30, 0.12),
-    0 12px 22px rgba(60, 50, 30, 0.07);
+  box-shadow: var(--shadow-sm);
   font-size: 14.5px;
   line-height: 1.4;
-  transition: transform 0.18s ease, box-shadow 0.18s;
+  transition: border-color 0.12s, box-shadow 0.12s;
   min-height: 110px;
   display: flex;
   flex-direction: column;
 }
 .postit:hover {
-  transform: rotate(0deg) scale(1.04) !important;
-  box-shadow:
-    0 2px 2px rgba(0,0,0,0.08),
-    0 8px 20px rgba(60, 50, 30, 0.18),
-    0 18px 36px rgba(60, 50, 30, 0.12);
-  z-index: 2;
+  border-color: var(--ink-faint);
+  box-shadow: var(--shadow-md);
 }
 
 .postit-tape {
-  position: absolute;
-  top: -7px;
-  left: 50%;
-  transform: translateX(-50%) rotate(-2deg);
-  width: 44px;
-  height: 14px;
-  background: var(--postit-tape);
-  border-radius: 1px;
-  box-shadow: 0 1px 2px rgba(0,0,0,0.08);
+  display: none;
 }
 
 .postit-section {
@@ -871,9 +940,9 @@ textarea, input {
 }
 .postit-check:hover { opacity: 1; }
 .postit-check.is-done {
-  background: var(--postit-ink);
-  border-color: var(--postit-ink);
-  color: var(--postit-bg);
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #ffffff;
   opacity: 1;
 }
 
@@ -902,14 +971,12 @@ textarea, input {
 
 /* In post-it, tags + dates inherit the postit ink */
 .postit .md-tag {
-  background: rgba(0,0,0,0.08);
-  color: inherit;
-  opacity: 0.75;
+  background: var(--accent-soft);
+  color: var(--ink-soft);
 }
 .postit .md-date {
-  background: rgba(0,0,0,0.06);
-  color: inherit;
-  opacity: 0.75;
+  background: var(--line-soft);
+  color: var(--ink-soft);
 }
 
 .postit-empty {
@@ -918,14 +985,14 @@ textarea, input {
   justify-content: center;
 }
 .postit-empty-card {
-  background: #fef3a8;
-  color: #5c4a16;
+  background: var(--bg-panel);
+  color: var(--ink-mute);
   padding: 30px 40px;
-  border-radius: 2px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
   position: relative;
   box-shadow: var(--shadow-paper);
   font-style: italic;
-  transform: rotate(-1.5deg);
 }
 
 /* ---------- Comments rail ---------- */
@@ -947,10 +1014,11 @@ textarea, input {
   display: flex;
   align-items: baseline;
   gap: 8px;
-  font-family: var(--font-display);
-  font-size: 22px;
+  font-family: var(--font-ui);
+  font-size: 18px;
+  font-weight: 700;
   color: var(--ink);
-  letter-spacing: -0.01em;
+  letter-spacing: 0;
   white-space: nowrap;
 }
 .comments-title > span:first-child {

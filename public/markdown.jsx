@@ -2,6 +2,8 @@
 // - # / ## / ### headings
 // - - [ ] / - [x] tasks (interactive)
 // - - bullets
+// - fenced code blocks
+// - tables
 // - paragraphs
 // - inline #tags and @dates get styled
 //
@@ -16,10 +18,52 @@ window.parseMarkdown = function parseMarkdown(text) {
   while (i < lines.length) {
     const line = lines[i];
 
+    // Fenced code block
+    const fence = line.match(/^```([^\s`]*)\s*$/);
+    if (fence) {
+      const start = i;
+      const buf = [];
+      i++;
+      while (i < lines.length && !/^```\s*$/.test(lines[i])) {
+        buf.push(lines[i]);
+        i++;
+      }
+      if (i < lines.length) i++;
+      blocks.push({
+        kind: "code",
+        lang: fence[1] || "",
+        text: buf.join("\n"),
+        lineIdx: start,
+        lineCount: i - start,
+      });
+      continue;
+    }
+
+    // Table
+    if (isTableStart(lines, i)) {
+      const start = i;
+      const headers = parseTableRow(lines[i]);
+      i += 2;
+      const rows = [];
+      while (i < lines.length && isTableRow(lines[i])) {
+        rows.push(parseTableRow(lines[i]));
+        i++;
+      }
+      blocks.push({ kind: "table", headers, rows, lineIdx: start, lineCount: i - start });
+      continue;
+    }
+
+    // Horizontal rule
+    if (/^\s*---+\s*$/.test(line)) {
+      blocks.push({ kind: "hr", lineIdx: i, lineCount: 1 });
+      i++;
+      continue;
+    }
+
     // Heading
     const heading = line.match(/^(#{1,3})\s+(.*)$/);
     if (heading) {
-      blocks.push({ kind: "heading", level: heading[1].length, text: heading[2], lineIdx: i });
+      blocks.push({ kind: "heading", level: heading[1].length, text: heading[2], lineIdx: i, lineCount: 1 });
       i++;
       continue;
     }
@@ -33,6 +77,7 @@ window.parseMarkdown = function parseMarkdown(text) {
         done: task[2].toLowerCase() === "x",
         text: task[3],
         lineIdx: i,
+        lineCount: 1,
       });
       i++;
       continue;
@@ -41,14 +86,14 @@ window.parseMarkdown = function parseMarkdown(text) {
     // Bullet
     const bullet = line.match(/^(\s*)-\s+(.*)$/);
     if (bullet) {
-      blocks.push({ kind: "bullet", indent: bullet[1].length, text: bullet[2], lineIdx: i });
+      blocks.push({ kind: "bullet", indent: bullet[1].length, text: bullet[2], lineIdx: i, lineCount: 1 });
       i++;
       continue;
     }
 
     // Blank
     if (line.trim() === "") {
-      blocks.push({ kind: "blank", lineIdx: i });
+      blocks.push({ kind: "blank", lineIdx: i, lineCount: 1 });
       i++;
       continue;
     }
@@ -62,37 +107,78 @@ window.parseMarkdown = function parseMarkdown(text) {
       lines[i].trim() !== "" &&
       !/^(#{1,3})\s+/.test(lines[i]) &&
       !/^(\s*)- \[( |x|X)\]\s+/.test(lines[i]) &&
-      !/^(\s*)-\s+/.test(lines[i])
+      !/^(\s*)-\s+/.test(lines[i]) &&
+      !/^```/.test(lines[i]) &&
+      !/^\s*---+\s*$/.test(lines[i]) &&
+      !isTableStart(lines, i)
     ) {
       buf.push(lines[i]);
       i++;
     }
-    blocks.push({ kind: "para", text: buf.join("\n"), lineIdx: start });
+    blocks.push({ kind: "para", text: buf.join("\n"), lineIdx: start, lineCount: i - start });
   }
 
   return blocks;
 };
 
-// Inline decorations: tags (#foo) and dates (@today / @sexta / @maio)
-window.renderInline = function renderInline(text) {
-  const parts = [];
-  const regex = /(#[\p{L}\p{N}\-_]+)|(@[\p{L}\p{N}\-_:]+)/gu;
+function isTableRow(line) {
+  return /^\s*\|.+\|\s*$/.test(line);
+}
+
+function isTableSeparator(line) {
+  if (!isTableRow(line)) return false;
+  return parseTableRow(line).every((cell) => /^:?-{3,}:?$/.test(cell));
+}
+
+function isTableStart(lines, i) {
+  return i + 1 < lines.length && isTableRow(lines[i]) && isTableSeparator(lines[i + 1]);
+}
+
+function parseTableRow(line) {
+  return line.trim().replace(/^\|/, "").replace(/\|$/, "").split("|").map((cell) => cell.trim());
+}
+
+// Inline decorations: strong, code, line breaks, tags (#foo), and dates (@today / @sexta / @maio)
+window.parseInlineMarkdown = function parseInlineMarkdown(text) {
+  const tokens = [];
+  const regex = /(\*\*([^*\n]+)\*\*)|(`([^`\n]+)`)|(#[\p{L}\p{N}\-_]+)|(@[\p{L}\p{N}\-_:]+)|(\n)/gu;
   let last = 0;
   let match;
-  let key = 0;
+
   while ((match = regex.exec(text)) !== null) {
     if (match.index > last) {
-      parts.push(text.slice(last, match.index));
+      tokens.push({ kind: "text", text: text.slice(last, match.index) });
     }
-    if (match[1]) {
-      parts.push(<span key={key++} className="md-tag">{match[1]}</span>);
-    } else if (match[2]) {
-      parts.push(<span key={key++} className="md-date">{match[2]}</span>);
+    if (match[2]) {
+      tokens.push({ kind: "strong", text: match[2] });
+    } else if (match[4]) {
+      tokens.push({ kind: "code", text: match[4] });
+    } else if (match[5]) {
+      tokens.push({ kind: "tag", text: match[5] });
+    } else if (match[6]) {
+      tokens.push({ kind: "date", text: match[6] });
+    } else if (match[7]) {
+      tokens.push({ kind: "br" });
     }
     last = regex.lastIndex;
   }
-  if (last < text.length) parts.push(text.slice(last));
-  return parts;
+
+  if (last < text.length) {
+    tokens.push({ kind: "text", text: text.slice(last) });
+  }
+
+  return tokens;
+};
+
+window.renderInline = function renderInline(text) {
+  return window.parseInlineMarkdown(text).map((token, key) => {
+    if (token.kind === "strong") return <strong key={key} className="md-strong">{token.text}</strong>;
+    if (token.kind === "code") return <code key={key} className="md-inline-code">{token.text}</code>;
+    if (token.kind === "tag") return <span key={key} className="md-tag">{token.text}</span>;
+    if (token.kind === "date") return <span key={key} className="md-date">{token.text}</span>;
+    if (token.kind === "br") return <br key={key} />;
+    return token.text;
+  });
 };
 
 // Extract all tasks from a file (for post-it view and progress)
