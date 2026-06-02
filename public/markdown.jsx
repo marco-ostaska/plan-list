@@ -2,6 +2,8 @@
 // - # / ## / ### headings
 // - - [ ] / - [x] tasks (interactive)
 // - - bullets
+// - fenced code blocks
+// - tables
 // - paragraphs
 // - inline #tags and @dates get styled
 //
@@ -16,10 +18,52 @@ window.parseMarkdown = function parseMarkdown(text) {
   while (i < lines.length) {
     const line = lines[i];
 
+    // Fenced code block
+    const fence = line.match(/^```([^\s`]*)\s*$/);
+    if (fence) {
+      const start = i;
+      const buf = [];
+      i++;
+      while (i < lines.length && !/^```\s*$/.test(lines[i])) {
+        buf.push(lines[i]);
+        i++;
+      }
+      if (i < lines.length) i++;
+      blocks.push({
+        kind: "code",
+        lang: fence[1] || "",
+        text: buf.join("\n"),
+        lineIdx: start,
+        lineCount: i - start,
+      });
+      continue;
+    }
+
+    // Table
+    if (isTableStart(lines, i)) {
+      const start = i;
+      const headers = parseTableRow(lines[i]);
+      i += 2;
+      const rows = [];
+      while (i < lines.length && isTableRow(lines[i])) {
+        rows.push(parseTableRow(lines[i]));
+        i++;
+      }
+      blocks.push({ kind: "table", headers, rows, lineIdx: start, lineCount: i - start });
+      continue;
+    }
+
+    // Horizontal rule
+    if (/^\s*---+\s*$/.test(line)) {
+      blocks.push({ kind: "hr", lineIdx: i, lineCount: 1 });
+      i++;
+      continue;
+    }
+
     // Heading
     const heading = line.match(/^(#{1,3})\s+(.*)$/);
     if (heading) {
-      blocks.push({ kind: "heading", level: heading[1].length, text: heading[2], lineIdx: i });
+      blocks.push({ kind: "heading", level: heading[1].length, text: heading[2], lineIdx: i, lineCount: 1 });
       i++;
       continue;
     }
@@ -33,6 +77,7 @@ window.parseMarkdown = function parseMarkdown(text) {
         done: task[2].toLowerCase() === "x",
         text: task[3],
         lineIdx: i,
+        lineCount: 1,
       });
       i++;
       continue;
@@ -41,14 +86,14 @@ window.parseMarkdown = function parseMarkdown(text) {
     // Bullet
     const bullet = line.match(/^(\s*)-\s+(.*)$/);
     if (bullet) {
-      blocks.push({ kind: "bullet", indent: bullet[1].length, text: bullet[2], lineIdx: i });
+      blocks.push({ kind: "bullet", indent: bullet[1].length, text: bullet[2], lineIdx: i, lineCount: 1 });
       i++;
       continue;
     }
 
     // Blank
     if (line.trim() === "") {
-      blocks.push({ kind: "blank", lineIdx: i });
+      blocks.push({ kind: "blank", lineIdx: i, lineCount: 1 });
       i++;
       continue;
     }
@@ -62,16 +107,36 @@ window.parseMarkdown = function parseMarkdown(text) {
       lines[i].trim() !== "" &&
       !/^(#{1,3})\s+/.test(lines[i]) &&
       !/^(\s*)- \[( |x|X)\]\s+/.test(lines[i]) &&
-      !/^(\s*)-\s+/.test(lines[i])
+      !/^(\s*)-\s+/.test(lines[i]) &&
+      !/^```/.test(lines[i]) &&
+      !/^\s*---+\s*$/.test(lines[i]) &&
+      !isTableStart(lines, i)
     ) {
       buf.push(lines[i]);
       i++;
     }
-    blocks.push({ kind: "para", text: buf.join("\n"), lineIdx: start });
+    blocks.push({ kind: "para", text: buf.join("\n"), lineIdx: start, lineCount: i - start });
   }
 
   return blocks;
 };
+
+function isTableRow(line) {
+  return /^\s*\|.+\|\s*$/.test(line);
+}
+
+function isTableSeparator(line) {
+  if (!isTableRow(line)) return false;
+  return parseTableRow(line).every((cell) => /^:?-{3,}:?$/.test(cell));
+}
+
+function isTableStart(lines, i) {
+  return i + 1 < lines.length && isTableRow(lines[i]) && isTableSeparator(lines[i + 1]);
+}
+
+function parseTableRow(line) {
+  return line.trim().replace(/^\|/, "").replace(/\|$/, "").split("|").map((cell) => cell.trim());
+}
 
 // Inline decorations: tags (#foo) and dates (@today / @sexta / @maio)
 window.renderInline = function renderInline(text) {

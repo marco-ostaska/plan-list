@@ -3,7 +3,7 @@
 
 function EditableBlock({ block, onUpdate, onToggleTask, onContinue, autoFocus }) {
   const [editing, setEditing] = React.useState(!!autoFocus);
-  const [draft, setDraft] = React.useState(autoFocus ? (block.text || "") : "");
+  const [draft, setDraft] = React.useState(autoFocus ? blockToEditableText(block) : "");
   const taRef = React.useRef(null);
 
   React.useEffect(() => {
@@ -15,7 +15,7 @@ function EditableBlock({ block, onUpdate, onToggleTask, onContinue, autoFocus })
   }, [editing]);
 
   const startEdit = () => {
-    setDraft(block.text || "");
+    setDraft(blockToEditableText(block));
     setEditing(true);
   };
 
@@ -107,11 +107,55 @@ function EditableBlock({ block, onUpdate, onToggleTask, onContinue, autoFocus })
     );
   }
 
+  if (block.kind === "code") {
+    return (
+      <div className="md-code-block" onClick={startEdit}>
+        {block.lang ? <div className="md-code-lang">{block.lang}</div> : null}
+        <pre className="md-code"><code>{block.text}</code></pre>
+      </div>
+    );
+  }
+
+  if (block.kind === "table") {
+    return (
+      <div className="md-table-wrap" onClick={startEdit}>
+        <table className="md-table">
+          <thead>
+            <tr>{block.headers.map((cell, i) => <th key={i}>{window.renderInline(cell)}</th>)}</tr>
+          </thead>
+          <tbody>
+            {block.rows.map((row, r) => (
+              <tr key={r}>{row.map((cell, c) => <td key={c}>{window.renderInline(cell)}</td>)}</tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    );
+  }
+
+  if (block.kind === "hr") {
+    return <hr className="md-hr" onClick={startEdit} />;
+  }
+
   if (block.kind === "blank") {
     return <div className="md-blank" />;
   }
 
   return null;
+}
+
+function blockToEditableText(block) {
+  if (block.kind === "code") {
+    return `\`\`\`${block.lang || ""}\n${block.text}\n\`\`\``;
+  }
+  if (block.kind === "table") {
+    const header = `| ${block.headers.join(" | ")} |`;
+    const separator = `| ${block.headers.map(() => "---").join(" | ")} |`;
+    const rows = block.rows.map((row) => `| ${row.join(" | ")} |`);
+    return [header, separator, ...rows].join("\n");
+  }
+  if (block.kind === "hr") return "---";
+  return block.text || "";
 }
 
 function Editor({ content, onChange }) {
@@ -128,6 +172,16 @@ function Editor({ content, onChange }) {
 
   const handleUpdate = (block, newText) => {
     const lines = content.split("\n");
+    if (block.kind === "para" && block.lineCount) {
+      lines.splice(block.lineIdx, block.lineCount, ...newText.split("\n"));
+      onChange(lines.join("\n"));
+      return;
+    }
+    if (block.lineCount && block.lineCount > 1) {
+      lines.splice(block.lineIdx, block.lineCount, ...newText.split("\n"));
+      onChange(lines.join("\n"));
+      return;
+    }
     if (block.kind === "heading") {
       lines[block.lineIdx] = "#".repeat(block.level) + " " + newText;
     } else if (block.kind === "task") {
@@ -136,18 +190,8 @@ function Editor({ content, onChange }) {
     } else if (block.kind === "bullet") {
       const indent = " ".repeat(block.indent);
       lines[block.lineIdx] = `${indent}- ${newText}`;
-    } else if (block.kind === "para") {
-      // Paragraph may span multiple lines — replace the whole run
-      let end = block.lineIdx;
-      while (
-        end + 1 < lines.length &&
-        lines[end + 1].trim() !== "" &&
-        !/^(#{1,3})\s+/.test(lines[end + 1]) &&
-        !/^(\s*)- /.test(lines[end + 1])
-      ) {
-        end++;
-      }
-      lines.splice(block.lineIdx, end - block.lineIdx + 1, newText);
+    } else if (block.kind === "hr") {
+      lines[block.lineIdx] = newText;
     }
     onChange(lines.join("\n"));
   };
