@@ -1,5 +1,6 @@
 const express = require("express");
 const fs = require("fs");
+const os = require("os");
 const path = require("path");
 const chokidar = require("chokidar");
 
@@ -9,17 +10,67 @@ app.use(express.static(path.join(__dirname, "..", "public")));
 
 // ── helpers ──────────────────────────────────────────────────────────────────
 
-function resolveSafe(vaultPath, filePath) {
-  const vault = fs.realpathSync(vaultPath);
-  const full = fs.realpathSync(filePath);
-  if (!full.startsWith(vault + path.sep) && full !== vault) {
+function pathInside(basePath, targetPath) {
+  const rel = path.relative(basePath, targetPath);
+  return rel === "" || (!rel.startsWith("..") && !path.isAbsolute(rel));
+}
+
+function getAllowedVaultRoot() {
+  return fs.realpathSync(process.env.PLAN_LIST_VAULT_ROOT || os.homedir());
+}
+
+function getVaultPath(vaultPath) {
+  if (typeof vaultPath !== "string" || !vaultPath.trim()) {
+    throw new Error("path required");
+  }
+
+  const vault = fs.realpathSync(path.resolve(vaultPath));
+  if (!fs.statSync(vault).isDirectory()) {
+    throw new Error("not a directory");
+  }
+
+  const allowedRoot = getAllowedVaultRoot();
+  if (!pathInside(allowedRoot, vault)) {
+    throw new Error("path outside allowed root");
+  }
+
+  return vault;
+}
+
+function resolveVaultPath(vaultPath, filePath) {
+  const vault = getVaultPath(vaultPath);
+  const full = path.resolve(vault, filePath || "");
+  if (!pathInside(vault, full)) {
     throw new Error("path outside vault");
   }
   return full;
 }
 
+function resolveExistingVaultPath(vaultPath, filePath) {
+  const full = resolveVaultPath(vaultPath, filePath);
+  const real = fs.realpathSync(full);
+  const vault = getVaultPath(vaultPath);
+  if (!pathInside(vault, real)) {
+    throw new Error("path outside vault");
+  }
+  return real;
+}
+
+function safeMarkdownFileName(name) {
+  const fileName = (name || "Sem título") + (name?.endsWith(".md") ? "" : ".md");
+  if (fileName.includes("\0") || path.basename(fileName) !== fileName || !fileName.endsWith(".md")) {
+    throw new Error("invalid file name");
+  }
+  return fileName;
+}
+
 function relPath(vaultPath, full) {
-  return path.relative(path.resolve(vaultPath), full);
+  const vault = getVaultPath(vaultPath);
+  const resolved = path.resolve(full);
+  if (!pathInside(vault, resolved)) {
+    throw new Error("path outside vault");
+  }
+  return path.relative(vault, resolved);
 }
 
 function formatMtime(mtime) {
@@ -35,6 +86,14 @@ function formatMtime(mtime) {
   if (diffD === 1) return "ontem";
   if (diffD < 7) return `${diffD} dias atrás`;
   return d.toLocaleDateString("pt-BR");
+}
+
+function statusForPathError(error) {
+  if (error.message === "path required") return 400;
+  if (error.message === "not a directory") return 400;
+  if (error.message === "path outside allowed root") return 403;
+  if (error.message === "path outside vault") return 403;
+  return 404;
 }
 
 // ── GET /api/vault?path= ─────────────────────────────────────────────────────
@@ -117,12 +176,11 @@ app.get("/api/vault", async (req, res) => {
   const vaultPath = req.query.path;
   if (!vaultPath) return res.status(400).json({ error: "path required" });
 
-  const vault = path.resolve(vaultPath);
+  let vault;
   try {
-    const vaultStat = await fs.promises.stat(vault);
-    if (!vaultStat.isDirectory()) return res.status(400).json({ error: "not a directory" });
-  } catch {
-    return res.status(404).json({ error: "path not found" });
+    vault = getVaultPath(vaultPath);
+  } catch (e) {
+    return res.status(statusForPathError(e)).json({ error: e.message });
   }
 
   const result = { name: path.basename(vault), folders: [], rootFiles: [] };
@@ -131,7 +189,7 @@ app.get("/api/vault", async (req, res) => {
   await scanVaultAsync(vault, vault, 0, 3, result, SKIP_DIRS);
 
   // Inject comments from .tasklist-comments.json and prune orphans
-  const commentsFile = path.join(vault, ".tasklist-comments.json");
+  const commentsFile = resolveVaultPath(vault, ".tasklist-comments.json");
   if (fs.existsSync(commentsFile)) {
     try {
       const map = JSON.parse(fs.readFileSync(commentsFile, "utf8"));
@@ -163,12 +221,12 @@ app.get("/api/file", (req, res) => {
   const { path: filePath, vault: vaultPath } = req.query;
   if (!filePath || !vaultPath) return res.status(400).json({ error: "path and vault required" });
   try {
-    const full = resolveSafe(vaultPath, path.resolve(vaultPath, filePath));
+    const full = resolveExistingVaultPath(vaultPath, filePath);
     const content = fs.readFileSync(full, "utf8");
     const stat = fs.statSync(full);
     res.json({ content, updated: formatMtime(stat.mtimeMs) });
   } catch (e) {
-    res.status(e.message === "path outside vault" ? 403 : 404).json({ error: e.message });
+    res.status(statusForPathError(e)).json({ error: e.message });
   }
 });
 
@@ -181,12 +239,12 @@ app.put("/api/file", (req, res) => {
   const MAX_SIZE = 5 * 1024 * 1024;
   if (content != null && content.length > MAX_SIZE) return res.status(413).json({ error: "content too large" });
   try {
-    const full = resolveSafe(vaultPath, path.resolve(vaultPath, filePath));
+    const full = resolveExistingVaultPath(vaultPath, filePath);
     fs.writeFileSync(full, content, "utf8");
     const stat = fs.statSync(full);
     res.json({ updated: formatMtime(stat.mtimeMs) });
   } catch (e) {
-    res.status(e.message === "path outside vault" ? 403 : 500).json({ error: e.message });
+    res.status(statusForPathError(e)).json({ error: e.message });
   }
 });
 
@@ -195,17 +253,17 @@ app.put("/api/file", (req, res) => {
 app.post("/api/file", (req, res) => {
   const { vault: vaultPath, dir, name } = req.body;
   if (!vaultPath) return res.status(400).json({ error: "vault required" });
-  const fileName = (name || "Sem título") + (name?.endsWith(".md") ? "" : ".md");
   const dir2 = dir || "";
   try {
-    const dirFull = resolveSafe(vaultPath, path.resolve(vaultPath, dir2));
-    const fileFull = resolveSafe(vaultPath, path.join(dirFull, fileName));
+    const fileName = safeMarkdownFileName(name);
+    const dirFull = resolveExistingVaultPath(vaultPath, dir2);
+    const fileFull = resolveVaultPath(vaultPath, path.join(relPath(vaultPath, dirFull), fileName));
     if (fs.existsSync(fileFull)) return res.status(409).json({ error: "file exists" });
     fs.writeFileSync(fileFull, `# ${fileName.replace(/\.md$/, "")}\n\n- [ ] primeira task\n`, "utf8");
     const rel = relPath(vaultPath, fileFull);
     res.json({ id: rel, name: fileName, updated: "agora", content: fs.readFileSync(fileFull, "utf8"), comments: [] });
   } catch (e) {
-    res.status(e.message === "path outside vault" ? 403 : 500).json({ error: e.message });
+    res.status(statusForPathError(e)).json({ error: e.message });
   }
 });
 
@@ -215,15 +273,15 @@ app.patch("/api/file", (req, res) => {
   const { vault: vaultPath, path: filePath, newName } = req.body;
   if (!filePath || !vaultPath || !newName) return res.status(400).json({ error: "missing fields" });
   try {
-    const full = resolveSafe(vaultPath, path.resolve(vaultPath, filePath));
-    const newFileName = newName.endsWith(".md") ? newName : newName + ".md";
+    const full = resolveExistingVaultPath(vaultPath, filePath);
+    const newFileName = safeMarkdownFileName(newName);
     const newFull = path.join(path.dirname(full), newFileName);
-    resolveSafe(vaultPath, newFull);
+    resolveVaultPath(vaultPath, relPath(vaultPath, newFull));
     fs.renameSync(full, newFull);
     const newRel = relPath(vaultPath, newFull);
 
     // Update comments key if needed
-    const commentsFile = path.join(path.resolve(vaultPath), ".tasklist-comments.json");
+    const commentsFile = resolveVaultPath(vaultPath, ".tasklist-comments.json");
     if (fs.existsSync(commentsFile)) {
       try {
         const map = JSON.parse(fs.readFileSync(commentsFile, "utf8"));
@@ -237,7 +295,7 @@ app.patch("/api/file", (req, res) => {
 
     res.json({ id: newRel, name: newFileName });
   } catch (e) {
-    res.status(e.message === "path outside vault" ? 403 : 500).json({ error: e.message });
+    res.status(statusForPathError(e)).json({ error: e.message });
   }
 });
 
@@ -246,11 +304,12 @@ app.patch("/api/file", (req, res) => {
 app.get("/api/comments", (req, res) => {
   const vaultPath = req.query.vault;
   if (!vaultPath) return res.status(400).json({ error: "vault required" });
-  const file = path.join(path.resolve(vaultPath), ".tasklist-comments.json");
-  if (!fs.existsSync(file)) return res.json({});
   try {
+    const file = resolveVaultPath(vaultPath, ".tasklist-comments.json");
+    if (!fs.existsSync(file)) return res.json({});
     res.json(JSON.parse(fs.readFileSync(file, "utf8")));
-  } catch {
+  } catch (e) {
+    if (e.message.startsWith("path ")) return res.status(statusForPathError(e)).json({ error: e.message });
     res.json({});
   }
 });
@@ -260,12 +319,12 @@ app.get("/api/comments", (req, res) => {
 app.put("/api/comments", (req, res) => {
   const vaultPath = req.query.vault;
   if (!vaultPath) return res.status(400).json({ error: "vault required" });
-  const file = path.join(path.resolve(vaultPath), ".tasklist-comments.json");
   try {
+    const file = resolveVaultPath(vaultPath, ".tasklist-comments.json");
     fs.writeFileSync(file, JSON.stringify(req.body, null, 2), "utf8");
     res.json({ ok: true });
   } catch (e) {
-    res.status(500).json({ error: e.message });
+    res.status(statusForPathError(e)).json({ error: e.message });
   }
 });
 
@@ -277,12 +336,18 @@ app.get("/api/watch", (req, res) => {
   const vaultPath = req.query.path;
   if (!vaultPath) return res.status(400).end();
 
+  let vault;
+  try {
+    vault = getVaultPath(vaultPath);
+  } catch (e) {
+    return res.status(statusForPathError(e)).end();
+  }
+
   res.setHeader("Content-Type", "text/event-stream");
   res.setHeader("Cache-Control", "no-cache");
   res.setHeader("Connection", "keep-alive");
   res.flushHeaders();
 
-  const vault = path.resolve(vaultPath);
   const watcher = chokidar.watch(vault, {
     ignored: /(^|[/\\])\.(?!tasklist)/,
     ignoreInitial: true,
@@ -329,7 +394,17 @@ app.get("/api/watch", (req, res) => {
 
 // ── start ────────────────────────────────────────────────────────────────────
 
-const PORT = process.env.PORT || 8080;
-app.listen(PORT, "0.0.0.0", () => {
-  console.log(`plan-list running at http://0.0.0.0:${PORT}`);
-});
+if (require.main === module) {
+  const PORT = process.env.PORT || 8080;
+  app.listen(PORT, "0.0.0.0", () => {
+    console.log(`plan-list running at http://0.0.0.0:${PORT}`);
+  });
+}
+
+module.exports = {
+  app,
+  getVaultPath,
+  resolveVaultPath,
+  resolveExistingVaultPath,
+  safeMarkdownFileName,
+};
