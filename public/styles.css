@@ -1,20 +1,20 @@
 :root {
-  /* Palette — papel (default) — warm off-white, cool-leaning text (per speckit-tracker light) */
-  --bg: #f0ede8;
-  --bg-panel: #f7f5f1;
-  --bg-paper: #fdfbf7;
-  --bg-paper-edge: #e9e6e0;
-  --ink: #26272c;
-  --ink-soft: #585b64;
-  --ink-mute: #87898f;
-  --ink-faint: #b0b2b8;
-  --line: #dcdad4;
-  --line-soft: #e6e3de;
-  --accent: #7080c8;
-  --accent-soft: rgba(112, 128, 200, 0.12);
-  --shadow-sm: 0 1px 0 rgba(30, 30, 40, 0.04), 0 2px 8px rgba(30, 30, 40, 0.05);
-  --shadow-md: 0 4px 14px rgba(30, 30, 40, 0.08), 0 1px 0 rgba(30, 30, 40, 0.04);
-  --shadow-paper: 0 1px 0 rgba(30, 30, 40, 0.04), 0 8px 24px rgba(30, 30, 40, 0.06);
+  /* Palette — neutral workbench */
+  --bg: #f6f7f8;
+  --bg-panel: #ffffff;
+  --bg-paper: #ffffff;
+  --bg-paper-edge: #e5e7eb;
+  --ink: #111827;
+  --ink-soft: #374151;
+  --ink-mute: #6b7280;
+  --ink-faint: #9ca3af;
+  --line: #d1d5db;
+  --line-soft: #e5e7eb;
+  --accent: #2563eb;
+  --accent-soft: rgba(37, 99, 235, 0.10);
+  --shadow-sm: 0 1px 2px rgba(17, 24, 39, 0.05);
+  --shadow-md: 0 6px 18px rgba(17, 24, 39, 0.08);
+  --shadow-paper: 0 1px 2px rgba(17, 24, 39, 0.05);
 
   --font-ui: "Plus Jakarta Sans", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
   --font-display: var(--font-ui);
@@ -48,23 +48,23 @@
   --line-h: 1.7;
 }
 
-/* Aesthetic: limpo (neutral white, no warmth) */
+/* Aesthetic: limpo (white workspace) */
 :root[data-aesthetic="limpo"] {
-  --bg: #f4f4f2;
-  --bg-panel: #fafafa;
+  --bg: #ffffff;
+  --bg-panel: #ffffff;
   --bg-paper: #ffffff;
-  --bg-paper-edge: #ebebea;
-  --ink: #1f2028;
-  --ink-soft: #52566a;
-  --ink-mute: #838796;
-  --ink-faint: #b4b7c4;
-  --line: #e2e2e0;
-  --line-soft: #eaeae8;
-  --accent: #7080c8;
-  --accent-soft: rgba(112, 128, 200, 0.1);
-  --shadow-sm: 0 1px 2px rgba(0,0,0,0.04);
-  --shadow-md: 0 4px 12px rgba(0,0,0,0.06);
-  --shadow-paper: 0 1px 2px rgba(0,0,0,0.04), 0 8px 24px rgba(0,0,0,0.04);
+  --bg-paper-edge: #edf0f3;
+  --ink: #111827;
+  --ink-soft: #374151;
+  --ink-mute: #6b7280;
+  --ink-faint: #a1a8b3;
+  --line: #d8dee6;
+  --line-soft: #eef1f4;
+  --accent: #0f766e;
+  --accent-soft: rgba(15, 118, 110, 0.10);
+  --shadow-sm: 0 1px 2px rgba(17,24,39,0.04);
+  --shadow-md: 0 4px 14px rgba(17,24,39,0.06);
+  --shadow-paper: none;
 }
 
 /* Aesthetic: mono (dark, speckit-tracker-inspired charcoal) */
@@ -79,8 +79,8 @@
   --ink-faint: #3e4149;
   --line: #272a31;
   --line-soft: #21232a;
-  --accent: #8b93e8;
-  --accent-soft: rgba(139, 147, 232, 0.18);
+  --accent: #60a5fa;
+  --accent-soft: rgba(96, 165, 250, 0.16);
   --shadow-sm: 0 1px 0 rgba(0,0,0,0.3);
   --shadow-md: 0 4px 12px rgba(0,0,0,0.4);
   --shadow-paper: 0 4px 16px rgba(0,0,0,0.5);
@@ -793,9 +793,6 @@ textarea, input {
 .postit-board {
   padding: 32px max(20px, calc(var(--content-pad) - 16px)) 60px;
   background-color: var(--bg);
-  background-image:
-    radial-gradient(circle at 20% 30%, rgba(180,150,100,0.05) 0, transparent 50%),
-    radial-gradient(circle at 80% 70%, rgba(180,150,100,0.04) 0, transparent 50%);
   min-height: 100%;
   display: flex;
   flex-direction: column;
@@ -870,12 +867,12 @@ textarea, input {
   padding: 5px 14px;
   border-radius: var(--radius-sm);
   border: 1px solid var(--line);
-  background: rgba(255,255,255,0.5);
+  background: var(--bg-panel);
   font-style: normal;
   transition: background 0.1s, color 0.1s;
 }
 .postit-empty-add:hover {
-  background: white;
+  background: var(--bg-paper);
   color: var(--ink);
 }
 
@@ -888,41 +885,27 @@ textarea, input {
 }
 
 .postit {
-  background: var(--postit-bg);
-  color: var(--postit-ink);
-  padding: 22px 16px 16px;
-  border-radius: 2px;
+  background: var(--bg-panel);
+  color: var(--ink);
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
   position: relative;
-  box-shadow:
-    0 1px 1px rgba(0,0,0,0.06),
-    0 4px 12px rgba(60, 50, 30, 0.12),
-    0 12px 22px rgba(60, 50, 30, 0.07);
+  box-shadow: var(--shadow-sm);
   font-size: 14.5px;
   line-height: 1.4;
-  transition: transform 0.18s ease, box-shadow 0.18s;
+  transition: border-color 0.12s, box-shadow 0.12s;
   min-height: 110px;
   display: flex;
   flex-direction: column;
 }
 .postit:hover {
-  transform: rotate(0deg) scale(1.04) !important;
-  box-shadow:
-    0 2px 2px rgba(0,0,0,0.08),
-    0 8px 20px rgba(60, 50, 30, 0.18),
-    0 18px 36px rgba(60, 50, 30, 0.12);
-  z-index: 2;
+  border-color: var(--ink-faint);
+  box-shadow: var(--shadow-md);
 }
 
 .postit-tape {
-  position: absolute;
-  top: -7px;
-  left: 50%;
-  transform: translateX(-50%) rotate(-2deg);
-  width: 44px;
-  height: 14px;
-  background: var(--postit-tape);
-  border-radius: 1px;
-  box-shadow: 0 1px 2px rgba(0,0,0,0.08);
+  display: none;
 }
 
 .postit-section {
@@ -957,9 +940,9 @@ textarea, input {
 }
 .postit-check:hover { opacity: 1; }
 .postit-check.is-done {
-  background: var(--postit-ink);
-  border-color: var(--postit-ink);
-  color: var(--postit-bg);
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #ffffff;
   opacity: 1;
 }
 
@@ -988,14 +971,12 @@ textarea, input {
 
 /* In post-it, tags + dates inherit the postit ink */
 .postit .md-tag {
-  background: rgba(0,0,0,0.08);
-  color: inherit;
-  opacity: 0.75;
+  background: var(--accent-soft);
+  color: var(--ink-soft);
 }
 .postit .md-date {
-  background: rgba(0,0,0,0.06);
-  color: inherit;
-  opacity: 0.75;
+  background: var(--line-soft);
+  color: var(--ink-soft);
 }
 
 .postit-empty {
@@ -1004,14 +985,14 @@ textarea, input {
   justify-content: center;
 }
 .postit-empty-card {
-  background: #fef3a8;
-  color: #5c4a16;
+  background: var(--bg-panel);
+  color: var(--ink-mute);
   padding: 30px 40px;
-  border-radius: 2px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
   position: relative;
   box-shadow: var(--shadow-paper);
   font-style: italic;
-  transform: rotate(-1.5deg);
 }
 
 /* ---------- Comments rail ---------- */
