@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- GitHub-style file-box document shell based on the plan-list redesign sketch.
 - GitHub-style light and dark themes for the full application shell.
 - Full-document markdown editing mode alongside the rendered document and post-it views.
 - Delete actions for tasks in both the document editor and post-it board.
@@ -20,11 +21,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Reworked the sidebar, document topbar, comments rail, and post-it board to match the generated redesign while preserving the existing API-backed workflows.
 - Reworked the visual system around GitHub Primer colors, native font stacks, borders, states, and primary action styling.
 - Refined the sidebar layout, icons, spacing, and file/folder presentation for denser vault navigation.
 
 ### Fixed
 
+- Selected the first available markdown file after opening a vault so the redesigned shell starts with an active document.
 - Fixed new notes not being editable or saved after using the `+ nota` action.
 - Fixed API text error responses causing frontend JSON parse crashes.
 

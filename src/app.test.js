@@ -33,6 +33,29 @@ function testVisualThemeUsesGitHubTheme() {
   assert.strictEqual(source.includes("TweakColor"), false, "theme should not be overridden by arbitrary accent colors");
 }
 
+function testRedesignShellKeepsRealApiPersistence() {
+  const source = readAppSource();
+
+  assert.ok(source.includes("function ViewTabs({ mode, onChange })"), "redesign should use the new view tabs");
+  assert.ok(source.includes('className="file-topbar"'), "redesign should render the GitHub-style file topbar");
+  assert.ok(source.includes('className="file-box"'), "redesign should render the bordered file box");
+  assert.strictEqual(source.includes("<FileHeader"), false, "old file header should be removed from the rendered shell");
+  assert.ok(source.includes("const debouncedPersist = useDebounce(persistContent, 800);"), "content edits should still use debounced API persistence");
+  assert.ok(source.includes("fetch(\"/api/file\""), "file writes should still go through the server API");
+  assert.ok(source.includes("fetch(`/api/comments?vault=${encodeURIComponent(vaultPath)}`"), "comments should still be persisted by vault path");
+}
+
+function testVaultLoadSelectsInitialFile() {
+  const source = readAppSource();
+
+  assert.ok(source.includes("function getFirstVaultFile(vault)"), "app should centralize initial file selection");
+  assert.ok(source.includes("const firstFile = getFirstVaultFile(data);"), "vault loading should find the first available file");
+  assert.ok(source.includes("setActiveFileId(firstFile.id);"), "vault loading should select the first file when there is no active file");
+  assert.ok(source.includes("setFileContent(firstFile.content || \"\");"), "initial selection should hydrate editor content");
+}
+
 testMarkdownModeEditsWholeDocument();
 testApiParsingHandlesNonJsonResponses();
 testVisualThemeUsesGitHubTheme();
+testRedesignShellKeepsRealApiPersistence();
+testVaultLoadSelectsInitialFile();

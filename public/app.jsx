@@ -25,101 +25,32 @@ async function readJsonResponse(response) {
   }
 }
 
-// ── ViewToggle ───────────────────────────────────────────────────────────────
-
-function ViewToggle({ mode, onChange }) {
-  return (
-    <div className="view-toggle" role="tablist">
-      <button
-        role="tab"
-        className={`vt-btn ${mode === "edit" ? "is-active" : ""}`}
-        onClick={() => onChange("edit")}
-      >
-        <svg viewBox="0 0 16 16" width="13" height="13"><path d="M2 3h12M2 7h12M2 11h8" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"/></svg>
-        documento
-      </button>
-      <button
-        role="tab"
-        className={`vt-btn ${mode === "markdown" ? "is-active" : ""}`}
-        onClick={() => onChange("markdown")}
-      >
-        <svg viewBox="0 0 16 16" width="13" height="13"><path d="M3 3h10v10H3zM5 6h6M5 8h4M5 10h5" fill="none" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/></svg>
-        markdown
-      </button>
-      <button
-        role="tab"
-        className={`vt-btn ${mode === "postit" ? "is-active" : ""}`}
-        onClick={() => onChange("postit")}
-      >
-        <svg viewBox="0 0 16 16" width="13" height="13"><rect x="2" y="2" width="5" height="5" stroke="currentColor" strokeWidth="1.4" fill="none"/><rect x="9" y="2" width="5" height="5" stroke="currentColor" strokeWidth="1.4" fill="none"/><rect x="2" y="9" width="5" height="5" stroke="currentColor" strokeWidth="1.4" fill="none"/></svg>
-        post-its
-      </button>
-    </div>
-  );
+function getFirstVaultFile(vault) {
+  if (vault.rootFiles?.length) return vault.rootFiles[0];
+  for (const folder of vault.folders || []) {
+    if (folder.files?.length) return folder.files[0];
+  }
+  return null;
 }
 
-// ── FileHeader ───────────────────────────────────────────────────────────────
+// ── ViewTabs ─────────────────────────────────────────────────────────────────
 
-function FileHeader({ file, folderName, accent, mode, onModeChange, onToggleComments, commentsOpen, commentsCount, onRename }) {
-  const tasks = window.extractTasks(file.content);
-  const total = tasks.length;
-  const done = tasks.filter((t) => t.done).length;
-  const pct = total === 0 ? 0 : Math.round((done / total) * 100);
-  const displayName = file.name.replace(/\.md$/, "");
-
-  const [renaming, setRenaming] = useState(false);
-  const [draft, setDraft] = useState(displayName);
-  const inputRef = React.useRef(null);
-
-  React.useEffect(() => { setDraft(displayName); }, [file.id]);
-  React.useEffect(() => {
-    if (renaming && inputRef.current) { inputRef.current.focus(); inputRef.current.select(); }
-  }, [renaming]);
-
-  const commitRename = () => {
-    const v = draft.trim() || "Sem título";
-    onRename(v);
-    setRenaming(false);
-  };
-
+function ViewTabs({ mode, onChange }) {
   return (
-    <header className="file-header">
-      <div className="fh-top">
-        <div className="fh-crumbs">
-          {folderName ? (<><span className="fh-crumb">{folderName}</span><span className="fh-sep">/</span></>) : null}
-          {renaming ? (
-            <input ref={inputRef} className="fh-rename-input" value={draft}
-              onChange={(e) => setDraft(e.target.value)}
-              onBlur={commitRename}
-              onKeyDown={(e) => { if (e.key === "Enter") commitRename(); else if (e.key === "Escape") { setDraft(displayName); setRenaming(false); } }} />
-          ) : (
-            <button className="fh-crumb fh-current" onClick={() => setRenaming(true)} title="Renomear">{displayName}</button>
-          )}
-        </div>
-        <div className="fh-actions">
-          <ViewToggle mode={mode} onChange={onModeChange} />
-          <button className={`fh-comments ${commentsOpen ? "is-active" : ""}`} onClick={onToggleComments} title="Comentários">
-            <svg viewBox="0 0 16 16" width="14" height="14"><path d="M2 3h12v8H6l-3 3v-3H2z" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinejoin="round"/></svg>
-            <span>{commentsCount}</span>
-          </button>
-        </div>
-      </div>
-      {total > 0 ? (
-        <div className="fh-progress">
-          <div className="fh-bar"><div className="fh-bar-fill" style={{ width: `${pct}%`, background: accent }} /></div>
-          <div className="fh-progress-meta">
-            <span className="fh-progress-num"><strong>{done}</strong>/{total}</span>
-            <span className="fh-progress-label">{pct}% concluído</span>
-            <span className="fh-progress-sep">·</span>
-            <span className="fh-progress-label">editado {file.updated}</span>
-          </div>
-        </div>
-      ) : (
-        <div className="fh-progress">
-          <div className="fh-progress-meta"><span className="fh-progress-label">sem tasks · editado {file.updated}</span></div>
-        </div>
-      )}
-    </header>
+    <div className="view-tabs" role="tablist">
+      <button role="tab" className={`vt-btn ${mode === "edit" ? "is-active" : ""}`} onClick={() => onChange("edit")}>
+        <svg viewBox="0 0 16 16" width="14" height="14"><path d="M2 4h12M2 8h12M2 12h8" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" fill="none" /></svg>
+        Documento
+      </button>
+      <button role="tab" className={`vt-btn ${mode === "markdown" ? "is-active" : ""}`} onClick={() => onChange("markdown")}>
+        <svg viewBox="0 0 16 16" width="14" height="14"><path d="M5 5L2.5 8 5 11M11 5l2.5 3L11 11" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" fill="none" /></svg>
+        Markdown
+      </button>
+      <button role="tab" className={`vt-btn ${mode === "postit" ? "is-active" : ""}`} onClick={() => onChange("postit")}>
+        <svg viewBox="0 0 16 16" width="14" height="14"><g><rect x="2.5" y="2.5" width="4.5" height="4.5" rx="1" stroke="currentColor" strokeWidth="1.4" fill="none" /><rect x="9" y="2.5" width="4.5" height="4.5" rx="1" stroke="currentColor" strokeWidth="1.4" fill="none" /><rect x="2.5" y="9" width="4.5" height="4.5" rx="1" stroke="currentColor" strokeWidth="1.4" fill="none" /></g></svg>
+        Quadro
+      </button>
+    </div>
   );
 }
 
@@ -129,12 +60,15 @@ function VaultPicker({ onOpen, error }) {
   const [val, setVal] = useState("");
   const submit = () => { if (val.trim()) onOpen(val.trim()); };
   return (
-    <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100vh", background: "var(--bg)" }}>
-      <div style={{ background: "var(--bg-paper)", border: "1px solid var(--line)", borderRadius: "var(--radius-lg)", padding: "40px 48px", boxShadow: "var(--shadow-paper)", display: "flex", flexDirection: "column", gap: "20px", minWidth: "360px" }}>
-        <div style={{ fontFamily: "var(--font-display)", fontSize: "28px", letterSpacing: "-0.01em", color: "var(--ink)" }}>◐ plan-list</div>
-        <div style={{ color: "var(--ink-soft)", fontSize: "14px" }}>
+    <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100vh", background: "var(--canvas-subtle)" }}>
+      <div style={{ background: "var(--canvas)", border: "1px solid var(--border)", borderRadius: "var(--radius-lg)", padding: "36px 40px", boxShadow: "var(--shadow-lg)", display: "flex", flexDirection: "column", gap: "18px", width: "400px", maxWidth: "calc(100vw - 32px)" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: "10px", fontSize: "20px", fontWeight: 600, color: "var(--fg)" }}>
+          <svg width="22" height="22" viewBox="0 0 16 16" fill="var(--fg-subtle)"><path d="M2 2.5A2.5 2.5 0 0 1 4.5 0h8.75a.75.75 0 0 1 .75.75v12.5a.75.75 0 0 1-.75.75h-2.5a.75.75 0 0 1 0-1.5h1.75v-2h-8a1 1 0 0 0-.714 1.7.75.75 0 1 1-1.072 1.05A2.495 2.495 0 0 1 2 11.5Zm10.5-1h-8a1 1 0 0 0-1 1v6.708A2.486 2.486 0 0 1 4.5 9h8Z" /></svg>
+          plan-list
+        </div>
+        <div style={{ color: "var(--fg-muted)", fontSize: "14px", lineHeight: 1.5 }}>
           Informe o caminho da pasta com seus arquivos{" "}
-          <code style={{ fontFamily: "var(--font-mono)", fontSize: "12px", background: "var(--line-soft)", padding: "1px 5px", borderRadius: "3px" }}>.md</code>
+          <code style={{ fontFamily: "var(--font-mono)", fontSize: "12px", background: "var(--canvas-inset)", padding: "1px 5px", borderRadius: "4px" }}>.md</code>
         </div>
         <div style={{ display: "flex", gap: "8px" }}>
           <input
@@ -143,11 +77,11 @@ function VaultPicker({ onOpen, error }) {
             onChange={(e) => setVal(e.target.value)}
             onKeyDown={(e) => { if (e.key === "Enter") submit(); }}
             placeholder="/home/você/notas"
-            style={{ flex: 1, background: "var(--bg)", border: "1px solid var(--line)", borderRadius: "var(--radius-sm)", padding: "8px 12px", fontSize: "14px", color: "var(--ink)", outline: "none", fontFamily: "var(--font-mono)" }}
+            style={{ flex: 1, background: "var(--canvas)", border: "1px solid var(--border)", borderRadius: "var(--radius)", padding: "8px 12px", fontSize: "14px", color: "var(--fg)", outline: "none", fontFamily: "var(--font-mono)", minWidth: 0 }}
           />
           <button
             onClick={submit}
-            style={{ background: "var(--success)", color: "white", padding: "8px 18px", borderRadius: "var(--radius-sm)", fontSize: "13px", fontWeight: 500, border: "none", cursor: "pointer", opacity: val.trim() ? 1 : 0.4 }}
+            style={{ background: "var(--success)", color: "white", padding: "8px 18px", borderRadius: "var(--radius)", fontSize: "13px", fontWeight: 600, border: "none", cursor: "pointer", opacity: val.trim() ? 1 : 0.4 }}
           >
             Abrir
           </button>
@@ -179,6 +113,8 @@ function App() {
   const [fileUpdated, setFileUpdated] = useState("");
   const [viewMode, setViewMode] = useState("edit");
   const [commentsOpen, setCommentsOpen] = useState(true);
+  const [renaming, setRenaming] = useState(false);
+  const [renameDraft, setRenameDraft] = useState("");
 
   // Apply tweaks to DOM
   useEffect(() => {
@@ -197,6 +133,12 @@ function App() {
       const data = await readJsonResponse(r);
       if (!r.ok) throw new Error(data.error || r.statusText);
       setVault(data);
+      const firstFile = getFirstVaultFile(data);
+      if (!activeFileIdRef.current && firstFile) {
+        setActiveFileId(firstFile.id);
+        setFileContent(firstFile.content || "");
+        setFileUpdated(firstFile.updated || "");
+      }
       setVaultPath(p);
       localStorage.setItem("vaultPath", p);
 
@@ -246,6 +188,7 @@ function App() {
 
   const pickFile = useCallback((fileId) => {
     setActiveFileId(fileId);
+    setRenaming(false);
     if (!vaultPath) return;
     if (pickFileAbortRef.current) {
       pickFileAbortRef.current.abort();
@@ -390,8 +333,21 @@ function App() {
     return <VaultPicker onOpen={loadVault} error={vaultError} />;
   }
   if (!vault) {
-    return <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100vh", color: "var(--ink-mute)", fontStyle: "italic" }}>carregando…</div>;
+    return <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100vh", color: "var(--fg-muted)", fontStyle: "italic" }}>carregando…</div>;
   }
+
+  const tasks = file ? window.extractTasks(file.content) : [];
+  const total = tasks.length;
+  const done = tasks.filter((t) => t.done).length;
+  const pct = total === 0 ? 0 : Math.round((done / total) * 100);
+  const complete = total > 0 && done === total;
+  const displayName = file ? file.name.replace(/\.md$/, "") : "";
+
+  const commitRename = () => {
+    const nextName = renameDraft.trim() || "Sem título";
+    handleRename(nextName);
+    setRenaming(false);
+  };
 
   return (
     <div className="app-shell">
@@ -407,35 +363,84 @@ function App() {
       <main className="main-area">
         {file ? (
           <>
-            <FileHeader
-              file={file}
-              folderName={folder?.name}
-              accent="var(--accent)"
-              mode={viewMode}
-              onModeChange={setViewMode}
-              onToggleComments={() => { const next = !commentsOpen; setCommentsOpen(next); setTweak("showComments", next); }}
-              commentsOpen={commentsOpen}
-              commentsCount={(commentsMap[activeFileId] || []).length}
-              onRename={handleRename}
-            />
+            <div className="file-topbar">
+              <div className="breadcrumb">
+                <span className="bc-folder">{vault.name}</span>
+                <span className="bc-sep">/</span>
+                {folder ? (
+                  <>
+                    <span className="bc-folder">{folder.name}</span>
+                    <span className="bc-sep">/</span>
+                  </>
+                ) : null}
+                {renaming ? (
+                  <input
+                    className="bc-rename-input"
+                    autoFocus
+                    value={renameDraft}
+                    onChange={(e) => setRenameDraft(e.target.value)}
+                    onBlur={commitRename}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") commitRename();
+                      else if (e.key === "Escape") {
+                        setRenameDraft(displayName);
+                        setRenaming(false);
+                      }
+                    }}
+                  />
+                ) : (
+                  <span className="bc-file" title="Renomear" onClick={() => { setRenameDraft(displayName); setRenaming(true); }}>{displayName}.md</span>
+                )}
+              </div>
+              <div className="topbar-actions">
+                <button className={`btn ${commentsOpen ? "is-active" : ""}`} onClick={() => { const next = !commentsOpen; setCommentsOpen(next); setTweak("showComments", next); }} title="Comentários">
+                  <svg width="15" height="15" viewBox="0 0 16 16" fill="currentColor"><path d="M1 2.75C1 1.784 1.784 1 2.75 1h10.5c.966 0 1.75.784 1.75 1.75v7.5A1.75 1.75 0 0 1 13.25 12H9.06l-2.573 2.573A1.458 1.458 0 0 1 4 13.543V12H2.75A1.75 1.75 0 0 1 1 10.25Z" /></svg>
+                  <span className="btn-count">{(commentsMap[activeFileId] || []).length}</span>
+                </button>
+              </div>
+            </div>
             <div className="content-scroll">
-              {viewMode === "edit" ? (
-                <Editor content={fileContent} onChange={handleContentChange} />
-              ) : viewMode === "markdown" ? (
-                <textarea
-                  className="raw-markdown-editor"
-                  value={fileContent}
-                  onChange={(e) => handleContentChange(e.target.value)}
-                  spellCheck="false"
-                  aria-label="Editar markdown completo"
-                />
-              ) : (
-                <PostItBoard content={fileContent} onChange={handleContentChange} />
-              )}
+              <div className="file-canvas">
+                <div className="file-box">
+                  <div className="file-box-header">
+                    <ViewTabs mode={viewMode} onChange={setViewMode} />
+                    <div className="file-box-meta">
+                      {total > 0 ? (
+                        <div className="fb-progress">
+                          <div className="fb-progress-bar">
+                            <div className="fb-progress-fill" style={{ width: `${pct}%`, background: complete ? "var(--success)" : "var(--done)" }} />
+                          </div>
+                          <span className="fb-progress-num"><strong>{done}</strong>/{total} · {pct}%</span>
+                        </div>
+                      ) : (
+                        <span className="fb-progress-num">sem tasks</span>
+                      )}
+                      <span className="fbm-edited">editado {file.updated}</span>
+                    </div>
+                  </div>
+
+                  {viewMode === "edit" ? (
+                    <div className="markdown-body"><Editor content={fileContent} onChange={handleContentChange} /></div>
+                  ) : viewMode === "markdown" ? (
+                    <textarea
+                      className="raw-markdown-editor"
+                      value={fileContent}
+                      onChange={(e) => handleContentChange(e.target.value)}
+                      spellCheck="false"
+                      aria-label="Editar markdown completo"
+                    />
+                  ) : (
+                    <PostItBoard content={fileContent} onChange={handleContentChange} />
+                  )}
+                </div>
+              </div>
             </div>
           </>
         ) : (
-          <div className="empty-state">selecione um arquivo</div>
+          <div className="empty-state">
+            <svg className="es-glyph" width="40" height="40" viewBox="0 0 16 16" fill="currentColor"><path d="M2 1.75C2 .784 2.784 0 3.75 0h6.586c.464 0 .909.184 1.237.513l2.914 2.914c.329.328.513.773.513 1.237v9.586A1.75 1.75 0 0 1 13.25 16h-9.5A1.75 1.75 0 0 1 2 14.25Z" /></svg>
+            <span>Selecione um arquivo</span>
+          </div>
         )}
       </main>
 
@@ -449,11 +454,11 @@ function App() {
       ) : null}
 
       <TweaksPanel title="Tweaks">
-        <TweakSection title="Estética">
+        <TweakSection label="Estética">
           <TweakRadio label="visual" value={tweaks.aesthetic} onChange={(v) => setTweak("aesthetic", v)}
             options={[{ value: "github", label: "GitHub claro" }, { value: "github-dark", label: "GitHub escuro" }]} />
         </TweakSection>
-        <TweakSection title="Layout">
+        <TweakSection label="Layout">
           <TweakRadio label="densidade" value={tweaks.density} onChange={(v) => setTweak("density", v)}
             options={[{ value: "compacto", label: "compacto" }, { value: "confortável", label: "confortável" }, { value: "espaçoso", label: "espaçoso" }]} />
           <TweakToggle label="painel de comentários" value={tweaks.showComments} onChange={(v) => setTweak("showComments", v)} />
