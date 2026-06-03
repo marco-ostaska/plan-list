@@ -4,6 +4,7 @@
 function EditableBlock({ block, onUpdate, onToggleTask, onContinue, autoFocus }) {
   const [editing, setEditing] = React.useState(!!autoFocus);
   const [draft, setDraft] = React.useState(autoFocus ? blockToEditableText(block) : "");
+  const [liveUpdate] = React.useState(!!autoFocus);
   const taRef = React.useRef(null);
 
   React.useEffect(() => {
@@ -33,7 +34,11 @@ function EditableBlock({ block, onUpdate, onToggleTask, onContinue, autoFocus })
         ref={taRef}
         className="md-edit-input"
         value={draft}
-        onChange={(e) => setDraft(e.target.value)}
+        onChange={(e) => {
+          const value = e.target.value;
+          setDraft(value);
+          if (liveUpdate) onUpdate(block, value);
+        }}
         onBlur={() => commit(false)}
         onKeyDown={(e) => {
           if (e.key === "Enter" && !e.shiftKey) {
