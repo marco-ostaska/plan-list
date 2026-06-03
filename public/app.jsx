@@ -15,6 +15,16 @@ function useDebounce(fn, delay) {
   }, [delay]);
 }
 
+async function readJsonResponse(response) {
+  const text = await response.text();
+  if (!text) return {};
+  try {
+    return JSON.parse(text);
+  } catch {
+    return { error: text };
+  }
+}
+
 // ── ViewToggle ───────────────────────────────────────────────────────────────
 
 function ViewToggle({ mode, onChange }) {
@@ -27,6 +37,14 @@ function ViewToggle({ mode, onChange }) {
       >
         <svg viewBox="0 0 16 16" width="13" height="13"><path d="M2 3h12M2 7h12M2 11h8" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"/></svg>
         documento
+      </button>
+      <button
+        role="tab"
+        className={`vt-btn ${mode === "markdown" ? "is-active" : ""}`}
+        onClick={() => onChange("markdown")}
+      >
+        <svg viewBox="0 0 16 16" width="13" height="13"><path d="M3 3h10v10H3zM5 6h6M5 8h4M5 10h5" fill="none" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/></svg>
+        markdown
       </button>
       <button
         role="tab"
@@ -129,7 +147,7 @@ function VaultPicker({ onOpen, error }) {
           />
           <button
             onClick={submit}
-            style={{ background: "var(--accent)", color: "white", padding: "8px 18px", borderRadius: "var(--radius-sm)", fontSize: "13px", fontWeight: 500, border: "none", cursor: "pointer", opacity: val.trim() ? 1 : 0.4 }}
+            style={{ background: "var(--success)", color: "white", padding: "8px 18px", borderRadius: "var(--radius-sm)", fontSize: "13px", fontWeight: 500, border: "none", cursor: "pointer", opacity: val.trim() ? 1 : 0.4 }}
           >
             Abrir
           </button>
@@ -143,8 +161,7 @@ function VaultPicker({ onOpen, error }) {
 // ── Tweaks defaults ──────────────────────────────────────────────────────────
 
 const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
-  "aesthetic": "papel",
-  "accent": "#7080c8",
+  "aesthetic": "github",
   "density": "confortável",
   "showComments": true
 }/*EDITMODE-END*/;
@@ -167,8 +184,7 @@ function App() {
   useEffect(() => {
     document.documentElement.dataset.aesthetic = tweaks.aesthetic;
     document.documentElement.dataset.density = tweaks.density;
-    document.documentElement.style.setProperty("--accent", tweaks.accent);
-  }, [tweaks.aesthetic, tweaks.density, tweaks.accent]);
+  }, [tweaks.aesthetic, tweaks.density]);
 
   useEffect(() => { setCommentsOpen(tweaks.showComments); }, [tweaks.showComments]);
 
@@ -178,14 +194,14 @@ function App() {
     setVaultError("");
     try {
       const r = await fetch(`/api/vault?path=${encodeURIComponent(p)}`);
-      if (!r.ok) { const e = await r.json(); throw new Error(e.error || r.statusText); }
-      const data = await r.json();
+      const data = await readJsonResponse(r);
+      if (!r.ok) throw new Error(data.error || r.statusText);
       setVault(data);
       setVaultPath(p);
       localStorage.setItem("vaultPath", p);
 
       const cr = await fetch(`/api/comments?vault=${encodeURIComponent(p)}`);
-      if (cr.ok) setCommentsMap(await cr.json());
+      if (cr.ok) setCommentsMap(await readJsonResponse(cr));
     } catch (e) {
       setVaultError(e.message);
     }
@@ -213,7 +229,7 @@ function App() {
       }
       if (changed === activeFileIdRef.current && !isDirtyRef.current) {
         fetch(`/api/file?vault=${encodeURIComponent(vaultPath)}&path=${encodeURIComponent(changed)}`)
-          .then((r) => r.json())
+          .then(readJsonResponse)
           .then((d) => { setFileContent(d.content); setFileUpdated(d.updated); })
           .catch(() => {});
       }
@@ -237,7 +253,7 @@ function App() {
     const controller = new AbortController();
     pickFileAbortRef.current = controller;
     fetch(`/api/file?vault=${encodeURIComponent(vaultPath)}&path=${encodeURIComponent(fileId)}`, { signal: controller.signal })
-      .then((r) => r.json())
+      .then(readJsonResponse)
       .then((d) => { setFileContent(d.content); setFileUpdated(d.updated); })
       .catch((err) => { if (err.name !== "AbortError") { /* ignore */ } });
   }, [vaultPath]);
@@ -250,7 +266,7 @@ function App() {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ vault: vaultPath, path: fileId, content }),
-    }).then((r) => r.json()).then((d) => {
+    }).then(readJsonResponse).then((d) => {
       if (d.updated) setFileUpdated(d.updated);
       isDirtyRef.current = false;
     }).catch(() => {});
@@ -312,7 +328,7 @@ function App() {
       body: JSON.stringify({ vault: vaultPath, dir, name }),
     });
     if (!r.ok) return;
-    const newFile = await r.json();
+    const newFile = await readJsonResponse(r);
     setVault((v) => {
       if (!v) return v;
       if (!dir) {
@@ -338,7 +354,7 @@ function App() {
       body: JSON.stringify({ vault: vaultPath, path: activeFileId, newName }),
     });
     if (!r.ok) return;
-    const { id: newId, name: newFileName } = await r.json();
+    const { id: newId, name: newFileName } = await readJsonResponse(r);
     if (commentsMap[activeFileId]) {
       const next = { ...commentsMap, [newId]: commentsMap[activeFileId] };
       delete next[activeFileId];
@@ -394,7 +410,7 @@ function App() {
             <FileHeader
               file={file}
               folderName={folder?.name}
-              accent={tweaks.accent}
+              accent="var(--accent)"
               mode={viewMode}
               onModeChange={setViewMode}
               onToggleComments={() => { const next = !commentsOpen; setCommentsOpen(next); setTweak("showComments", next); }}
@@ -405,6 +421,14 @@ function App() {
             <div className="content-scroll">
               {viewMode === "edit" ? (
                 <Editor content={fileContent} onChange={handleContentChange} />
+              ) : viewMode === "markdown" ? (
+                <textarea
+                  className="raw-markdown-editor"
+                  value={fileContent}
+                  onChange={(e) => handleContentChange(e.target.value)}
+                  spellCheck="false"
+                  aria-label="Editar markdown completo"
+                />
               ) : (
                 <PostItBoard content={fileContent} onChange={handleContentChange} />
               )}
@@ -427,9 +451,7 @@ function App() {
       <TweaksPanel title="Tweaks">
         <TweakSection title="Estética">
           <TweakRadio label="visual" value={tweaks.aesthetic} onChange={(v) => setTweak("aesthetic", v)}
-            options={[{ value: "papel", label: "papel" }, { value: "limpo", label: "limpo" }, { value: "mono", label: "mono" }]} />
-          <TweakColor label="accent" value={tweaks.accent} onChange={(v) => setTweak("accent", v)}
-            options={["#7080c8", "#5b7a6e", "#c7522a", "#7a6a3a", "#222222"]} />
+            options={[{ value: "github", label: "GitHub claro" }, { value: "github-dark", label: "GitHub escuro" }]} />
         </TweakSection>
         <TweakSection title="Layout">
           <TweakRadio label="densidade" value={tweaks.density} onChange={(v) => setTweak("density", v)}

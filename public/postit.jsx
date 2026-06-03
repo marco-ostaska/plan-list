@@ -12,7 +12,7 @@ const STICKY_COLORS = [
 
 const ROTATIONS = [-1.4, 0.8, -0.6, 1.6, -1.1, 0.4, 1.2, -0.9, 0.3];
 
-function PostIt({ task, color, rotation, onToggle, onEdit }) {
+function PostIt({ task, color, rotation, onToggle, onEdit, onDelete }) {
   const [editing, setEditing] = React.useState(false);
   const [draft, setDraft] = React.useState(task.text);
   const ref = React.useRef(null);
@@ -80,6 +80,16 @@ function PostIt({ task, color, rotation, onToggle, onEdit }) {
             {window.renderInline(task.text)}
           </div>
         )}
+        <button
+          className="postit-delete"
+          onClick={() => onDelete(task)}
+          aria-label="Excluir task"
+          title="Excluir task"
+        >
+          <svg viewBox="0 0 16 16" width="13" height="13">
+            <path d="M5 5l6 6M11 5l-6 6" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+          </svg>
+        </button>
       </div>
     </div>
   );
@@ -97,6 +107,10 @@ function PostItBoard({ content, onChange }) {
     const indent = " ".repeat(task.indent);
     lines[task.lineIdx] = `${indent}- [${task.done ? "x" : " "}] ${newText}`;
     onChange(lines.join("\n"));
+  };
+
+  const handleDelete = (task) => {
+    onChange(window.deleteLine(content, task.lineIdx));
   };
 
   // Add a new task to a specific section (or at the end if no section)
@@ -199,6 +213,7 @@ function PostItBoard({ content, onChange }) {
                   rotation={ROTATIONS[rotIdx++ % ROTATIONS.length]}
                   onToggle={handleToggle}
                   onEdit={handleEdit}
+                  onDelete={handleDelete}
                 />
               ))}
             </div>

@@ -1,7 +1,7 @@
 // Editor: renders parsed markdown. Tasks are interactive checkboxes.
 // Blocks use double-click editing so normal click/drag still supports copying text.
 
-function EditableBlock({ block, onUpdate, onToggleTask, onContinue, autoFocus }) {
+function EditableBlock({ block, onUpdate, onToggleTask, onDeleteTask, onContinue, autoFocus }) {
   const [editing, setEditing] = React.useState(!!autoFocus);
   const [draft, setDraft] = React.useState(autoFocus ? blockToEditableText(block) : "");
   const [liveUpdate] = React.useState(!!autoFocus);
@@ -91,6 +91,16 @@ function EditableBlock({ block, onUpdate, onToggleTask, onContinue, autoFocus })
         <span className="md-task-text" onDoubleClick={startEdit}>
           {window.renderInline(block.text)}
         </span>
+        <button
+          className="md-task-delete"
+          onClick={() => onDeleteTask(block)}
+          aria-label="Excluir task"
+          title="Excluir task"
+        >
+          <svg viewBox="0 0 16 16" width="13" height="13">
+            <path d="M5 5l6 6M11 5l-6 6" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
+          </svg>
+        </button>
       </div>
     );
   }
@@ -205,6 +215,10 @@ function Editor({ content, onChange }) {
     onChange(window.toggleTaskLine(content, block.lineIdx));
   };
 
+  const handleDeleteTask = (block) => {
+    onChange(window.deleteLine(content, block.lineIdx));
+  };
+
   // Insert a new line of the same kind directly below `block`
   const handleContinue = (block) => {
     const lines = content.split("\n");
@@ -233,7 +247,7 @@ function Editor({ content, onChange }) {
     let newLine = "";
     if (kind === "task") newLine = "- [ ] ";
     else if (kind === "heading") newLine = "## ";
-    else if (kind === "para") newLine = "";
+    else if (kind === "para") newLine = "Nova nota";
 
     lines.push("");
     lines.push(newLine);
@@ -249,6 +263,7 @@ function Editor({ content, onChange }) {
           block={b}
           onUpdate={handleUpdate}
           onToggleTask={handleToggle}
+          onDeleteTask={handleDeleteTask}
           onContinue={handleContinue}
           autoFocus={b.lineIdx === autoFocusLine}
         />

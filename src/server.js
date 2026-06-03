@@ -11,9 +11,12 @@ app.use(express.static(path.join(__dirname, "..", "public")));
 
 const apiLimiter = rateLimit({
   windowMs: 60 * 1000,
-  limit: 120,
+  limit: 600,
   standardHeaders: true,
   legacyHeaders: false,
+  handler: (req, res) => {
+    res.status(429).json({ error: "too many requests" });
+  },
 });
 
 app.use("/api", apiLimiter);

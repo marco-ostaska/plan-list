@@ -18,6 +18,12 @@ test("server exports the API rate limiter middleware", () => {
   assert.equal(typeof apiLimiter, "function");
 });
 
+test("API rate limiter returns JSON errors", () => {
+  const serverSource = fs.readFileSync(path.join(__dirname, "server.js"), "utf8");
+
+  assert.match(serverSource, /res\.status\(429\)\.json\(\{ error: "too many requests" \}\)/);
+});
+
 test("getVaultPath returns a canonical directory under the allowed root", () => {
   const vault = fs.mkdtempSync(path.join(os.tmpdir(), "plan-list-vault-"));
 

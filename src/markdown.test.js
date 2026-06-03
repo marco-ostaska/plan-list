@@ -97,8 +97,16 @@ function testParseInlineFormatting() {
   ]);
 }
 
+function testDeleteLineRemovesOneLine() {
+  const markdown = loadMarkdownModule();
+
+  assert.strictEqual(markdown.deleteLine("a\n- [ ] b\nc", 1), "a\nc");
+  assert.strictEqual(markdown.deleteLine("a\nb", 4), "a\nb");
+}
+
 testParseMarkdownCodeFence();
 testParseMarkdownTable();
 testExtractTasksAroundAdvancedBlocks();
 testParagraphStopsBeforeTable();
 testParseInlineFormatting();
+testDeleteLineRemovesOneLine();

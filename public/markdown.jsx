@@ -170,6 +170,13 @@ window.parseInlineMarkdown = function parseInlineMarkdown(text) {
   return tokens;
 };
 
+window.deleteLine = function deleteLine(text, lineIdx) {
+  const lines = text.split("\n");
+  if (lineIdx < 0 || lineIdx >= lines.length) return text;
+  lines.splice(lineIdx, 1);
+  return lines.join("\n");
+};
+
 window.renderInline = function renderInline(text) {
   return window.parseInlineMarkdown(text).map((token, key) => {
     if (token.kind === "strong") return <strong key={key} className="md-strong">{token.text}</strong>;

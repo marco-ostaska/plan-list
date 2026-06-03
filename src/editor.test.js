@@ -29,5 +29,23 @@ function testNewAutofocusedBlocksSaveWhileTyping() {
   );
 }
 
+function testNoteButtonCreatesEditableContent() {
+  const source = fs.readFileSync(path.join(__dirname, "..", "public", "editor.jsx"), "utf8");
+
+  assert.ok(
+    source.includes('else if (kind === "para") newLine = "Nova nota";'),
+    "new notes should create a paragraph block that can be edited and saved"
+  );
+}
+
+function testEditorCanDeleteTasks() {
+  const source = fs.readFileSync(path.join(__dirname, "..", "public", "editor.jsx"), "utf8");
+
+  assert.ok(source.includes("onDeleteTask"), "task rows should expose a delete action");
+  assert.ok(source.includes("window.deleteLine(content, block.lineIdx)"), "task delete should remove the task line from markdown");
+}
+
 testReadableBlocksDoNotEditOnSingleClick();
 testNewAutofocusedBlocksSaveWhileTyping();
+testNoteButtonCreatesEditableContent();
+testEditorCanDeleteTasks();

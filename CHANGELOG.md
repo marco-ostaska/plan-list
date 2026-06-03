@@ -9,15 +9,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- GitHub-style light and dark themes for the full application shell.
+- Full-document markdown editing mode alongside the rendered document and post-it views.
+- Delete actions for tasks in both the document editor and post-it board.
 - Sidebar search for matching markdown files by file name, folder name, or file content.
 - Folder filter controls for narrowing the sidebar explorer to selected markdown folders.
 - Explorer-style sidebar metadata, path context, active-folder expansion, and empty-search feedback.
 - Live editing updates for auto-focused editor blocks so newly continued blocks persist while typing.
-- Sidebar source tests covering search, folder filtering, markdown-folder visibility, and explorer context.
+- Source tests covering GitHub theme controls, markdown mode, task deletion, sidebar search, folder filtering, markdown-folder visibility, and explorer context.
 
 ### Changed
 
+- Reworked the visual system around GitHub Primer colors, native font stacks, borders, states, and primary action styling.
 - Refined the sidebar layout, icons, spacing, and file/folder presentation for denser vault navigation.
+
+### Fixed
+
+- Fixed new notes not being editable or saved after using the `+ nota` action.
+- Fixed API text error responses causing frontend JSON parse crashes.
 
 ## [1.0.0] - 2026-06-02
 

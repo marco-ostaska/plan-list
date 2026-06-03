@@ -1,28 +1,31 @@
 :root {
-  /* Palette — neutral workbench */
-  --bg: #f6f7f8;
+  /* Palette - GitHub Primer light */
+  --bg: #f6f8fa;
   --bg-panel: #ffffff;
   --bg-paper: #ffffff;
-  --bg-paper-edge: #e5e7eb;
-  --ink: #111827;
-  --ink-soft: #374151;
-  --ink-mute: #6b7280;
-  --ink-faint: #9ca3af;
-  --line: #d1d5db;
-  --line-soft: #e5e7eb;
-  --accent: #2563eb;
-  --accent-soft: rgba(37, 99, 235, 0.10);
-  --shadow-sm: 0 1px 2px rgba(17, 24, 39, 0.05);
-  --shadow-md: 0 6px 18px rgba(17, 24, 39, 0.08);
-  --shadow-paper: 0 1px 2px rgba(17, 24, 39, 0.05);
+  --bg-paper-edge: #d8dee4;
+  --ink: #1f2328;
+  --ink-soft: #59636e;
+  --ink-mute: #6e7781;
+  --ink-faint: #818b98;
+  --line: #d0d7de;
+  --line-soft: #d8dee4;
+  --accent: #0969da;
+  --accent-soft: #ddf4ff;
+  --success: #1a7f37;
+  --success-soft: #dafbe1;
+  --danger: #cf222e;
+  --shadow-sm: 0 1px 0 rgba(31, 35, 40, 0.04);
+  --shadow-md: 0 8px 24px rgba(140, 149, 159, 0.20);
+  --shadow-paper: 0 1px 0 rgba(31, 35, 40, 0.04);
 
-  --font-ui: "Plus Jakarta Sans", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
+  --font-ui: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans", Helvetica, Arial, sans-serif;
   --font-display: var(--font-ui);
-  --font-mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  --font-mono: ui-monospace, "SFMono-Regular", "SF Mono", Consolas, "Liberation Mono", Menlo, monospace;
 
   --radius-sm: 6px;
-  --radius-md: 10px;
-  --radius-lg: 14px;
+  --radius-md: 6px;
+  --radius-lg: 6px;
 
   /* Density (overridden by data-density) */
   --row-pad-y: 6px;
@@ -48,44 +51,50 @@
   --line-h: 1.7;
 }
 
-/* Aesthetic: limpo (white workspace) */
+/* GitHub light variants intentionally share the same product theme. */
+:root[data-aesthetic="github"],
+:root[data-aesthetic="papel"],
 :root[data-aesthetic="limpo"] {
-  --bg: #ffffff;
+  --bg: #f6f8fa;
   --bg-panel: #ffffff;
   --bg-paper: #ffffff;
-  --bg-paper-edge: #edf0f3;
-  --ink: #111827;
-  --ink-soft: #374151;
-  --ink-mute: #6b7280;
-  --ink-faint: #a1a8b3;
-  --line: #d8dee6;
-  --line-soft: #eef1f4;
-  --accent: #0f766e;
-  --accent-soft: rgba(15, 118, 110, 0.10);
-  --shadow-sm: 0 1px 2px rgba(17,24,39,0.04);
-  --shadow-md: 0 4px 14px rgba(17,24,39,0.06);
-  --shadow-paper: none;
+  --bg-paper-edge: #d8dee4;
+  --ink: #1f2328;
+  --ink-soft: #59636e;
+  --ink-mute: #6e7781;
+  --ink-faint: #818b98;
+  --line: #d0d7de;
+  --line-soft: #d8dee4;
+  --accent: #0969da;
+  --accent-soft: #ddf4ff;
+  --success: #1a7f37;
+  --success-soft: #dafbe1;
+  --danger: #cf222e;
+  --shadow-sm: 0 1px 0 rgba(31, 35, 40, 0.04);
+  --shadow-md: 0 8px 24px rgba(140, 149, 159, 0.20);
+  --shadow-paper: 0 1px 0 rgba(31, 35, 40, 0.04);
 }
 
-/* Aesthetic: mono (dark, speckit-tracker-inspired charcoal) */
+:root[data-aesthetic="github-dark"],
 :root[data-aesthetic="mono"] {
-  --bg: #15161b;
-  --bg-panel: #1a1c22;
-  --bg-paper: #1e2028;
-  --bg-paper-edge: #15161b;
-  --ink: #d4d6dc;
-  --ink-soft: #8d909a;
-  --ink-mute: #5e616a;
-  --ink-faint: #3e4149;
-  --line: #272a31;
-  --line-soft: #21232a;
-  --accent: #60a5fa;
-  --accent-soft: rgba(96, 165, 250, 0.16);
-  --shadow-sm: 0 1px 0 rgba(0,0,0,0.3);
-  --shadow-md: 0 4px 12px rgba(0,0,0,0.4);
-  --shadow-paper: 0 4px 16px rgba(0,0,0,0.5);
-  --font-display: "JetBrains Mono", ui-monospace, monospace;
-  --font-ui: "JetBrains Mono", ui-monospace, monospace;
+  --bg: #0d1117;
+  --bg-panel: #161b22;
+  --bg-paper: #0d1117;
+  --bg-paper-edge: #30363d;
+  --ink: #e6edf3;
+  --ink-soft: #c9d1d9;
+  --ink-mute: #8b949e;
+  --ink-faint: #6e7681;
+  --line: #30363d;
+  --line-soft: #21262d;
+  --accent: #2f81f7;
+  --accent-soft: rgba(56, 139, 253, 0.16);
+  --success: #3fb950;
+  --success-soft: rgba(46, 160, 67, 0.15);
+  --danger: #f85149;
+  --shadow-sm: 0 0 transparent;
+  --shadow-md: 0 8px 24px rgba(1, 4, 9, 0.45);
+  --shadow-paper: 0 0 transparent;
 }
 
 /* ---------- Base ---------- */
@@ -140,7 +149,7 @@ textarea, input {
   display: flex;
   flex-direction: column;
   border-right: 1px solid var(--line);
-  background: color-mix(in srgb, var(--bg-panel) 86%, var(--line-soft));
+  background: var(--bg-panel);
   min-width: 0;
   min-height: 0;
   position: relative;
@@ -579,7 +588,7 @@ textarea, input {
 }
 .file-row.is-active {
   background: var(--accent-soft);
-  color: var(--ink);
+  color: var(--accent);
 }
 .file-row.is-active::before {
   content: "";
@@ -663,7 +672,7 @@ textarea, input {
   padding: 9px 12px;
   font-size: 11px;
   color: var(--ink-mute);
-  background: color-mix(in srgb, var(--bg-panel) 82%, var(--line-soft));
+  background: var(--bg);
 }
 .foot-line {
   display: flex;
@@ -700,6 +709,7 @@ textarea, input {
   align-items: center;
   justify-content: space-between;
   gap: 16px;
+  flex-wrap: wrap;
 }
 
 .fh-crumbs {
@@ -755,6 +765,7 @@ textarea, input {
 
 .view-toggle {
   display: inline-flex;
+  flex-wrap: wrap;
   background: var(--bg);
   border: 1px solid var(--line);
   border-radius: var(--radius-sm);
@@ -772,8 +783,8 @@ textarea, input {
 }
 .vt-btn:hover { color: var(--ink-soft); }
 .vt-btn.is-active {
-  background: var(--bg-paper);
-  color: var(--ink);
+  background: var(--accent-soft);
+  color: var(--accent);
   box-shadow: var(--shadow-sm);
 }
 
@@ -843,12 +854,14 @@ textarea, input {
 /* ---------- Editor ---------- */
 
 .editor {
-  max-width: 760px;
+  max-width: 980px;
   margin: 0 auto;
-  padding: var(--content-pad-y) var(--content-pad);
+  padding: 32px var(--content-pad) 56px;
   background: var(--bg-paper);
   min-height: 100%;
   position: relative;
+  border-left: 1px solid var(--line-soft);
+  border-right: 1px solid var(--line-soft);
 }
 
 /* Ruled lines removed — they cause visual fatigue in daily use */
@@ -860,38 +873,35 @@ textarea, input {
   font-weight: 700;
   cursor: text;
   border-radius: 4px;
-  padding: 2px 4px;
-  margin: 0 -4px;
+  padding: 2px 0;
+  margin: 0;
   transition: background 0.1s;
 }
 .md-h:hover { background: var(--line-soft); }
 .md-h-1 {
-  font-size: 28px;
-  margin: 10px -4px 16px;
-  line-height: 1.2;
+  font-size: 32px;
+  margin: 8px 0 16px;
+  padding-bottom: 9px;
+  line-height: 1.25;
+  border-bottom: 1px solid var(--line);
 }
 .md-h-2 {
-  font-size: 20px;
-  margin: 26px -4px 10px;
+  font-size: 24px;
+  margin: 24px 0 16px;
+  padding-bottom: 7px;
   line-height: 1.25;
-  color: var(--ink-soft);
+  color: var(--ink);
+  border-bottom: 1px solid var(--line-soft);
 }
 .md-h-3 {
-  font-size: 16px;
-  margin: 20px -4px 8px;
+  font-size: 18px;
+  margin: 24px 0 10px;
   line-height: 1.3;
-  color: var(--ink-soft);
+  color: var(--ink);
 }
-
-:root[data-aesthetic="mono"] .md-h {
-  letter-spacing: 0;
-}
-:root[data-aesthetic="mono"] .md-h-1::before { content: "# "; color: var(--ink-faint); }
-:root[data-aesthetic="mono"] .md-h-2::before { content: "## "; color: var(--ink-faint); }
-:root[data-aesthetic="mono"] .md-h-3::before { content: "### "; color: var(--ink-faint); }
 
 .md-p {
-  margin: 0 0 12px;
+  margin: 0 0 16px;
   color: var(--ink);
   cursor: text;
   padding: 2px 4px;
@@ -1012,6 +1022,9 @@ textarea, input {
   transition: background 0.1s;
 }
 .md-task:hover { background: var(--line-soft); }
+.md-task:hover .md-task-delete {
+  opacity: 1;
+}
 .md-task.is-done .md-task-text {
   color: var(--ink-mute);
   text-decoration: line-through;
@@ -1046,6 +1059,23 @@ textarea, input {
   cursor: text;
   border-radius: 4px;
   text-wrap: pretty;
+}
+
+.md-task-delete {
+  width: 22px;
+  height: 22px;
+  border-radius: 4px;
+  color: var(--ink-faint);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  flex: 0 0 auto;
+  transition: opacity 0.1s, background 0.1s, color 0.1s;
+}
+.md-task-delete:hover {
+  background: var(--line);
+  color: var(--ink);
 }
 
 .md-blank {
@@ -1100,6 +1130,25 @@ textarea, input {
   outline: none;
   resize: none;
   display: block;
+}
+
+.raw-markdown-editor {
+  display: block;
+  width: min(980px, 100%);
+  min-height: 100%;
+  margin: 0 auto;
+  padding: 32px var(--content-pad) 56px;
+  border: 0;
+  border-left: 1px solid var(--line-soft);
+  border-right: 1px solid var(--line-soft);
+  background: var(--bg-paper);
+  color: var(--ink);
+  outline: none;
+  resize: none;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  line-height: 1.65;
+  tab-size: 2;
 }
 
 .md-tag {
@@ -1282,6 +1331,27 @@ textarea, input {
   cursor: text;
   word-break: break-word;
 }
+
+.postit-delete {
+  width: 22px;
+  height: 22px;
+  border-radius: 4px;
+  color: color-mix(in srgb, var(--ink-mute) 75%, transparent);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  flex: 0 0 auto;
+  transition: opacity 0.1s, background 0.1s, color 0.1s;
+}
+.postit:hover .postit-delete {
+  opacity: 1;
+}
+.postit-delete:hover {
+  background: var(--line-soft);
+  color: var(--ink);
+}
+
 .postit.is-done .postit-text {
   text-decoration: line-through;
   text-decoration-thickness: 1.5px;
@@ -1491,7 +1561,7 @@ textarea, input {
   color: var(--ink-faint);
 }
 .comments-send {
-  background: var(--accent);
+  background: var(--success);
   color: white;
   padding: 5px 14px;
   border-radius: var(--radius-sm);
