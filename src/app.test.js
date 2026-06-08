@@ -54,8 +54,20 @@ function testVaultLoadSelectsInitialFile() {
   assert.ok(source.includes("setFileContent(firstFile.content || \"\");"), "initial selection should hydrate editor content");
 }
 
+function testAppSupportsFolderCreationAndFileMoves() {
+  const source = readAppSource();
+
+  assert.ok(source.includes("const handleNewFolder = async (parentDir = \"\") => {"), "app should provide a folder creation handler");
+  assert.ok(source.includes("fetch(\"/api/folder\""), "folder creation should go through the folder API");
+  assert.ok(source.includes("const handleMoveFile = async (fileId, targetDir) => {"), "app should provide a file move handler");
+  assert.ok(source.includes("fetch(\"/api/file/move\""), "file moves should go through the move API");
+  assert.ok(source.includes("onMoveFile={handleMoveFile}"), "sidebar should receive the move handler");
+  assert.ok(source.includes("onNewFolder={handleNewFolder}"), "sidebar should receive the folder creation handler");
+}
+
 testMarkdownModeEditsWholeDocument();
 testApiParsingHandlesNonJsonResponses();
 testVisualThemeUsesGitHubTheme();
 testRedesignShellKeepsRealApiPersistence();
 testVaultLoadSelectsInitialFile();
+testAppSupportsFolderCreationAndFileMoves();

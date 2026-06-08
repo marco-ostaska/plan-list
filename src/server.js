@@ -81,6 +81,19 @@ function safeMarkdownFileName(name) {
   return fileName;
 }
 
+function safeFolderName(name) {
+  const folderName = (name || "Nova pasta").trim();
+  if (
+    !folderName ||
+    folderName.includes("\0") ||
+    folderName.startsWith(".") ||
+    path.basename(folderName) !== folderName
+  ) {
+    throw new Error("invalid folder name");
+  }
+  return folderName;
+}
+
 function relPath(vaultPath, full) {
   const vault = getVaultPath(vaultPath);
   const resolved = path.resolve(full);
@@ -110,12 +123,83 @@ function statusForPathError(error) {
   if (error.message === "not a directory") return 400;
   if (error.message === "path outside allowed root") return 403;
   if (error.message === "path outside vault") return 403;
+  if (error.message === "invalid file name") return 400;
+  if (error.message === "invalid folder name") return 400;
   return 404;
+}
+
+function createFolder(vaultPath, parentDir, name) {
+  const dir = parentDir || "";
+  const folderName = safeFolderName(name);
+  const parentFull = resolveExistingVaultPath(vaultPath, dir);
+  if (!fs.statSync(parentFull).isDirectory()) {
+    const error = new Error("parent is not a directory");
+    error.statusCode = 400;
+    throw error;
+  }
+  const folderFull = resolveVaultPath(vaultPath, path.join(relPath(vaultPath, parentFull), folderName));
+  if (fs.existsSync(folderFull)) {
+    const error = new Error("folder exists");
+    error.statusCode = 409;
+    throw error;
+  }
+  fs.mkdirSync(folderFull);
+  return { id: relPath(vaultPath, folderFull), name: folderName, files: [] };
+}
+
+function moveMarkdownFile(vaultPath, filePath, targetDir) {
+  if (!filePath.endsWith(".md")) {
+    const error = new Error("only .md files allowed");
+    error.statusCode = 400;
+    throw error;
+  }
+  const dir = targetDir || "";
+  const full = resolveExistingVaultPath(vaultPath, filePath);
+  if (!fs.statSync(full).isFile()) {
+    const error = new Error("not a file");
+    error.statusCode = 400;
+    throw error;
+  }
+  const targetFull = resolveExistingVaultPath(vaultPath, dir);
+  if (!fs.statSync(targetFull).isDirectory()) {
+    const error = new Error("target is not a directory");
+    error.statusCode = 400;
+    throw error;
+  }
+  const newFull = path.join(targetFull, path.basename(full));
+  resolveVaultPath(vaultPath, relPath(vaultPath, newFull));
+  if (path.resolve(full) === path.resolve(newFull)) {
+    const stat = fs.statSync(full);
+    return { id: filePath, name: path.basename(full), updated: formatMtime(stat.mtimeMs) };
+  }
+  if (fs.existsSync(newFull)) {
+    const error = new Error("file exists");
+    error.statusCode = 409;
+    throw error;
+  }
+
+  fs.renameSync(full, newFull);
+  const newRel = relPath(vaultPath, newFull);
+
+  const commentsFile = resolveVaultPath(vaultPath, ".tasklist-comments.json");
+  if (fs.existsSync(commentsFile)) {
+    try {
+      const map = JSON.parse(fs.readFileSync(commentsFile, "utf8"));
+      if (map[filePath]) {
+        map[newRel] = map[filePath];
+        delete map[filePath];
+        fs.writeFileSync(commentsFile, JSON.stringify(map, null, 2), "utf8");
+      }
+    } catch {}
+  }
+
+  const stat = fs.statSync(newFull);
+  return { id: newRel, name: path.basename(newFull), updated: formatMtime(stat.mtimeMs) };
 }
 
 // ── GET /api/vault?path= ─────────────────────────────────────────────────────
 
-async function scanVaultAsync(vault, currentDir, depth, maxDepth, result, skipDirs) {
+async function scanVaultAsync(vault, currentDir, depth, result, skipDirs) {
   let entries;
   try {
     entries = await fs.promises.readdir(currentDir, { withFileTypes: true });
@@ -130,7 +214,7 @@ async function scanVaultAsync(vault, currentDir, depth, maxDepth, result, skipDi
     if (skipDirs.has(entry.name)) continue;
     const full = path.join(currentDir, entry.name);
 
-    if (entry.isDirectory() && depth < maxDepth) {
+    if (entry.isDirectory()) {
       const rel = relPath(vault, full);
       const folder = { id: rel, name: entry.name, files: [] };
       result.folders.push(folder);
@@ -165,7 +249,7 @@ async function scanVaultAsync(vault, currentDir, depth, maxDepth, result, skipDi
           }
           await Promise.all(subReads);
           // recurse deeper
-          await scanVaultAsync(vault, full, depth + 1, maxDepth, result, skipDirs);
+          await scanVaultAsync(vault, full, depth + 1, result, skipDirs);
         })()
       );
     } else if (entry.isFile() && entry.name.endsWith(".md") && depth === 0) {
@@ -205,7 +289,7 @@ app.get("/api/vault", async (req, res) => {
   const result = { name: path.basename(vault), folders: [], rootFiles: [] };
   const SKIP_DIRS = new Set(["node_modules", ".git", ".obsidian", "__pycache__", ".DS_Store"]);
 
-  await scanVaultAsync(vault, vault, 0, 3, result, SKIP_DIRS);
+  await scanVaultAsync(vault, vault, 0, result, SKIP_DIRS);
 
   // Inject comments from .tasklist-comments.json and prune orphans
   const commentsFile = resolveVaultPath(vault, ".tasklist-comments.json");
@@ -290,6 +374,18 @@ app.post("/api/file", (req, res) => {
   }
 });
 
+// ── POST /api/folder — create new folder ─────────────────────────────────────
+
+app.post("/api/folder", (req, res) => {
+  const { vault: vaultPath, parentDir, name } = req.body;
+  if (!vaultPath) return res.status(400).json({ error: "vault required" });
+  try {
+    res.json(createFolder(vaultPath, parentDir, name));
+  } catch (e) {
+    res.status(e.statusCode || statusForPathError(e)).json({ error: e.message });
+  }
+});
+
 // ── PATCH /api/file — rename ─────────────────────────────────────────────────
 
 app.patch("/api/file", (req, res) => {
@@ -319,6 +415,18 @@ app.patch("/api/file", (req, res) => {
     res.json({ id: newRel, name: newFileName });
   } catch (e) {
     res.status(statusForPathError(e)).json({ error: e.message });
+  }
+});
+
+// ── PATCH /api/file/move — move markdown file ────────────────────────────────
+
+app.patch("/api/file/move", (req, res) => {
+  const { vault: vaultPath, path: filePath, targetDir } = req.body;
+  if (!filePath || !vaultPath) return res.status(400).json({ error: "vault and path required" });
+  try {
+    res.json(moveMarkdownFile(vaultPath, filePath, targetDir));
+  } catch (e) {
+    res.status(e.statusCode || statusForPathError(e)).json({ error: e.message });
   }
 });
 
@@ -375,7 +483,6 @@ app.get("/api/watch", (req, res) => {
   const watcher = chokidar.watch(vault, {
     ignored: /(^|[/\\])\.(?!tasklist)/,
     ignoreInitial: true,
-    depth: 3,
   });
 
   const send = (event, data) => {
@@ -418,9 +525,11 @@ app.get("/api/watch", (req, res) => {
 
 // ── start ────────────────────────────────────────────────────────────────────
 
+let runningServer = null;
+
 if (require.main === module) {
   const PORT = process.env.PORT || 8080;
-  app.listen(PORT, "0.0.0.0", () => {
+  runningServer = app.listen(PORT, "0.0.0.0", () => {
     console.log(`plan-list running at http://0.0.0.0:${PORT}`);
   });
 }
@@ -432,4 +541,8 @@ module.exports = {
   resolveVaultPath,
   resolveExistingVaultPath,
   safeMarkdownFileName,
+  safeFolderName,
+  scanVaultAsync,
+  createFolder,
+  moveMarkdownFile,
 };

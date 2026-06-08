@@ -20,7 +20,28 @@ function FolderGlyph({ open }) {
   );
 }
 
-function FileRow({ file, active, onClick }) {
+function buildFolderTree(folders) {
+  const nodes = new Map();
+  const roots = [];
+
+  folders.forEach((folder) => {
+    nodes.set(folder.id, { ...folder, children: [] });
+  });
+
+  nodes.forEach((node) => {
+    const parentId = node.id.split("/").slice(0, -1).join("/");
+    const parent = parentId ? nodes.get(parentId) : null;
+    if (parent) {
+      parent.children.push(node);
+    } else {
+      roots.push(node);
+    }
+  });
+
+  return roots;
+}
+
+function FileRow({ file, active, onClick, onDragStart }) {
   const tasks = window.extractTasks(file.content);
   const total = tasks.length;
   const done = tasks.filter((t) => t.done).length;
@@ -33,6 +54,8 @@ function FileRow({ file, active, onClick }) {
     <button
       className={`tree-row file-row ${active ? "is-active" : ""}`}
       onClick={onClick}
+      draggable={true}
+      onDragStart={(e) => onDragStart(e, file.id)}
       data-comment-anchor={`file-${file.id}`}
       title={displayName}
     >
@@ -50,20 +73,43 @@ function FileRow({ file, active, onClick }) {
   );
 }
 
-function FolderGroup({ folder, activeFileId, onPickFile, onNewFile, forceOpen }) {
+function folderContainsFile(folder, fileId) {
+  return folder.files.some((file) => file.id === fileId) ||
+    folder.children.some((child) => folderContainsFile(child, fileId));
+}
+
+function FolderGroup({ folder, activeFileId, onPickFile, onNewFile, onNewFolder, onMoveFile, onDragStart, forceOpen }) {
   const [open, setOpen] = React.useState(true);
-  const isActiveFolder = folder.files.some((file) => file.id === activeFileId);
+  const [dragOver, setDragOver] = React.useState(false);
+  const isActiveFolder = folderContainsFile(folder, activeFileId);
   React.useEffect(() => { if (isActiveFolder || forceOpen) setOpen(true); }, [isActiveFolder, forceOpen]);
+  const onDropFile = (e, targetDir) => {
+    e.preventDefault();
+    setDragOver(false);
+    const fileId = e.dataTransfer.getData("text/plain");
+    if (fileId) onMoveFile(fileId, targetDir);
+  };
 
   return (
-    <div className={`folder-group ${isActiveFolder ? "has-active-file" : ""}`}>
-      <button className="tree-row folder-header" onClick={() => setOpen(!open)} aria-expanded={open}>
+    <div className={`folder-group ${isActiveFolder ? "has-active-file" : ""} ${dragOver ? "is-drop-target" : ""}`}>
+      <button
+        className="tree-row folder-header"
+        onClick={() => setOpen(!open)}
+        aria-expanded={open}
+        onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
+        onDragLeave={() => setDragOver(false)}
+        onDrop={(e) => onDropFile(e, folder.id)}
+      >
         <span className={`folder-caret ${open ? "is-open" : ""}`}>
           <svg width="11" height="11" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M6.22 3.22a.75.75 0 0 1 1.06 0l4.25 4.25a.75.75 0 0 1 0 1.06l-4.25 4.25a.75.75 0 0 1-1.06-1.06L9.94 8 6.22 4.28a.75.75 0 0 1 0-1.06Z" /></svg>
         </span>
         <FolderGlyph open={open} />
         <span className="tree-name">{folder.name}</span>
         <span className="tree-count">{folder.files.length}</span>
+        <span className="icon-btn folder-new-btn" title="Nova pasta"
+          onClick={(e) => { e.stopPropagation(); onNewFolder(folder.id); }}>
+          <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><path d="M1.75 2A1.75 1.75 0 0 0 0 3.75v8.5C0 13.216.784 14 1.75 14h12.5A1.75 1.75 0 0 0 16 12.25v-6.5A1.75 1.75 0 0 0 14.25 4H7.5a.25.25 0 0 1-.2-.1L6.4 2.7A1.75 1.75 0 0 0 5 2Zm8.75 4.25a.75.75 0 0 1 .75.75v1.25h1.25a.75.75 0 0 1 0 1.5h-1.25V11a.75.75 0 0 1-1.5 0V9.75H8.5a.75.75 0 0 1 0-1.5h1.25V7a.75.75 0 0 1 .75-.75Z" /></svg>
+        </span>
         <span className="icon-btn folder-new-btn" title="Novo arquivo"
           onClick={(e) => { e.stopPropagation(); onNewFile(folder.id); }}>
           <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><path d="M7.75 2a.75.75 0 0 1 .75.75V7.25h4.5a.75.75 0 0 1 0 1.5h-4.5v4.5a.75.75 0 0 1-1.5 0v-4.5h-4.5a.75.75 0 0 1 0-1.5h4.5v-4.5A.75.75 0 0 1 7.75 2Z" /></svg>
@@ -72,21 +118,43 @@ function FolderGroup({ folder, activeFileId, onPickFile, onNewFile, forceOpen })
       {open ? (
         <div className="folder-files">
           {folder.files.map((f) => (
-            <FileRow key={f.id} file={f} active={f.id === activeFileId} onClick={() => onPickFile(f.id, folder.id)} />
+            <FileRow key={f.id} file={f} active={f.id === activeFileId} onClick={() => onPickFile(f.id, folder.id)} onDragStart={onDragStart} />
           ))}
+          {folder.children.length > 0 ? (
+            <div className="folder-children">
+              {folder.children.map(renderFolderTree)}
+            </div>
+          ) : null}
         </div>
       ) : null}
     </div>
   );
+
+  function renderFolderTree(folder) {
+    return (
+      <FolderGroup
+        key={folder.id}
+        folder={folder}
+        activeFileId={activeFileId}
+        onPickFile={onPickFile}
+        onNewFile={onNewFile}
+        onNewFolder={onNewFolder}
+        onMoveFile={onMoveFile}
+        onDragStart={onDragStart}
+        forceOpen={forceOpen}
+      />
+    );
+  }
 }
 
-function Sidebar({ vault, activeFileId, onPickFile, onNewFile, onChangeVault }) {
+function Sidebar({ vault, activeFileId, onPickFile, onNewFile, onNewFolder, onMoveFile, onChangeVault }) {
   const [searchQuery, setSearchQuery] = React.useState("");
   const [selectedFolderIds, setSelectedFolderIds] = React.useState(null);
   const [folderFilterOpen, setFolderFilterOpen] = React.useState(false);
+  const [rootDragOver, setRootDragOver] = React.useState(false);
   const normalizedQuery = searchQuery.trim().toLowerCase();
   const rootFiles = vault.rootFiles || [];
-  const navigableFolders = vault.folders.filter((folder) => folder.files.some((file) => file.name.endsWith(".md")));
+  const navigableFolders = vault.folders || [];
 
   const selectedFolderIdsSet = selectedFolderIds ? new Set(selectedFolderIds) : null;
   const visibleFolders = selectedFolderIdsSet ? navigableFolders.filter((folder) => selectedFolderIdsSet.has(folder.id)) : navigableFolders;
@@ -132,9 +200,20 @@ function Sidebar({ vault, activeFileId, onPickFile, onNewFile, onChangeVault }) 
       }
     : { ...vault, folders: visibleFolders };
 
+  const folderTree = buildFolderTree(displayedVault.folders);
   const displayedFileCount = displayedVault.folders.reduce((n, f) => n + f.files.length, 0) + (displayedVault.rootFiles?.length || 0);
   const totalFiles = visibleFolders.reduce((n, f) => n + f.files.length, 0) + rootFiles.length;
   const allFiles = navigableFolders.reduce((n, f) => n + f.files.length, 0) + rootFiles.length;
+  const onDragStart = (e, fileId) => {
+    e.dataTransfer.setData("text/plain", fileId);
+    e.dataTransfer.effectAllowed = "move";
+  };
+  const onDropFile = (e, targetDir) => {
+    e.preventDefault();
+    setRootDragOver(false);
+    const fileId = e.dataTransfer.getData("text/plain");
+    if (fileId) onMoveFile(fileId, targetDir);
+  };
 
   return (
     <aside className="sidebar">
@@ -150,6 +229,9 @@ function Sidebar({ vault, activeFileId, onPickFile, onNewFile, onChangeVault }) 
               main
             </span>
           </span>
+        </button>
+        <button className="icon-btn" title="Nova pasta" onClick={() => onNewFolder("")}>
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M1.75 2A1.75 1.75 0 0 0 0 3.75v8.5C0 13.216.784 14 1.75 14h12.5A1.75 1.75 0 0 0 16 12.25v-6.5A1.75 1.75 0 0 0 14.25 4H7.5a.25.25 0 0 1-.2-.1L6.4 2.7A1.75 1.75 0 0 0 5 2Zm8.75 4.25a.75.75 0 0 1 .75.75v1.25h1.25a.75.75 0 0 1 0 1.5h-1.25V11a.75.75 0 0 1-1.5 0V9.75H8.5a.75.75 0 0 1 0-1.5h1.25V7a.75.75 0 0 1 .75-.75Z" /></svg>
         </button>
         <button className="icon-btn" title="Novo arquivo" onClick={() => onNewFile("")}>
           <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M7.75 2a.75.75 0 0 1 .75.75V7.25h4.5a.75.75 0 0 1 0 1.5h-4.5v4.5a.75.75 0 0 1-1.5 0v-4.5h-4.5a.75.75 0 0 1 0-1.5h4.5v-4.5A.75.75 0 0 1 7.75 2Z" /></svg>
@@ -206,9 +288,14 @@ function Sidebar({ vault, activeFileId, onPickFile, onNewFile, onChangeVault }) 
       ) : null}
 
       <div className="sidebar-scroll">
-        {displayedVault.rootFiles?.length ? (
-          <div className="folder-group">
-            <div className="tree-row folder-header is-root">
+        {displayedVault.rootFiles?.length || !normalizedQuery ? (
+          <div className={`folder-group ${rootDragOver ? "is-drop-target" : ""}`}>
+            <div
+              className="tree-row folder-header is-root"
+              onDragOver={(e) => { e.preventDefault(); setRootDragOver(true); }}
+              onDragLeave={() => setRootDragOver(false)}
+              onDrop={(e) => onDropFile(e, "")}
+            >
               <span className="folder-caret is-empty" aria-hidden="true" />
               <FolderGlyph open={true} />
               <span className="tree-name">soltos</span>
@@ -216,19 +303,22 @@ function Sidebar({ vault, activeFileId, onPickFile, onNewFile, onChangeVault }) 
             </div>
             <div className="folder-files">
               {displayedVault.rootFiles.map((f) => (
-                <FileRow key={f.id} file={f} active={f.id === activeFileId} onClick={() => onPickFile(f.id, null)} />
+                <FileRow key={f.id} file={f} active={f.id === activeFileId} onClick={() => onPickFile(f.id, null)} onDragStart={onDragStart} />
               ))}
             </div>
           </div>
         ) : null}
 
-        {displayedVault.folders.map((folder) => (
+        {folderTree.map((folder) => (
           <FolderGroup
             key={folder.id}
             folder={folder}
             activeFileId={activeFileId}
             onPickFile={onPickFile}
             onNewFile={onNewFile}
+            onNewFolder={onNewFolder}
+            onMoveFile={onMoveFile}
+            onDragStart={onDragStart}
             forceOpen={Boolean(normalizedQuery)}
           />
         ))}

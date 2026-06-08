@@ -6,6 +6,10 @@ function readSidebarSource() {
   return fs.readFileSync(path.join(__dirname, "..", "public", "sidebar.jsx"), "utf8");
 }
 
+function readStylesSource() {
+  return fs.readFileSync(path.join(__dirname, "..", "public", "styles.css"), "utf8");
+}
+
 function testSidebarSearchIsControlled() {
   const source = readSidebarSource();
 
@@ -44,20 +48,66 @@ function testSidebarSearchFiltersFilesAndFolders() {
   );
 }
 
-function testSidebarHidesFoldersWithoutMarkdownFiles() {
+function testSidebarShowsFoldersWithoutMarkdownFiles() {
   const source = readSidebarSource();
 
   assert.ok(
-    source.includes("const navigableFolders = vault.folders.filter((folder) => folder.files.some((file) => file.name.endsWith(\".md\")));"),
-    "sidebar should hide folders that do not contain markdown files"
+    source.includes("const navigableFolders = vault.folders || [];"),
+    "sidebar should keep empty folders navigable"
   );
   assert.ok(
     source.includes("const totalFolders = navigableFolders.length;"),
-    "sidebar folder count should only include navigable markdown folders"
+    "sidebar folder count should include empty folders"
   );
   assert.ok(
     source.includes("folders: visibleFolders"),
-    "sidebar search should only operate on visible markdown folders"
+    "sidebar search should operate on visible folders"
+  );
+}
+
+function testSidebarNestsSubfoldersUnderParents() {
+  const source = readSidebarSource();
+
+  assert.ok(
+    source.includes("function buildFolderTree(folders) {"),
+    "sidebar should build a tree from flat folder paths"
+  );
+  assert.ok(
+    source.includes("parent.children.push(node);"),
+    "sidebar should attach subfolders to their parent folder"
+  );
+  assert.ok(
+    source.includes("function renderFolderTree(folder) {"),
+    "sidebar should render nested folder groups recursively"
+  );
+  assert.ok(
+    source.includes("{folder.children.map(renderFolderTree)}"),
+    "folder groups should show child folders inside the parent group"
+  );
+}
+
+function testSidebarSupportsFolderCreationAndDragDrop() {
+  const source = readSidebarSource();
+
+  assert.ok(
+    source.includes("onNewFolder"),
+    "sidebar should expose a folder creation action"
+  );
+  assert.ok(
+    source.includes("draggable={true}"),
+    "file rows should be draggable"
+  );
+  assert.ok(
+    source.includes("onDragStart={(e) => onDragStart(e, file.id)}"),
+    "file rows should start drags with their file id"
+  );
+  assert.ok(
+    source.includes("onDrop={(e) => onDropFile(e, folder.id)}"),
+    "folder rows should accept dropped files"
+  );
+  assert.ok(
+    source.includes("onDrop={(e) => onDropFile(e, \"\")}"),
+    "root file group should accept dropped files"
   );
 }
 
@@ -94,12 +144,25 @@ function testSidebarCanFilterVisibleFolders() {
   );
 }
 
+function testFolderFilterScrollStaysInsidePopover() {
+  const source = readStylesSource();
+
+  assert.ok(
+    source.includes("overscroll-behavior: contain;"),
+    "folder filter list should keep wheel and touch scrolling inside the popover"
+  );
+}
+
 function testSidebarExplorerShowsNavigationContext() {
   const source = readSidebarSource();
 
   assert(
-    source.includes("const isActiveFolder = folder.files.some((file) => file.id === activeFileId);"),
-    "folder groups should know when they contain the active file"
+    source.includes("function folderContainsFile(folder, fileId) {"),
+    "folder groups should detect active files recursively"
+  );
+  assert(
+    source.includes("const isActiveFolder = folderContainsFile(folder, activeFileId);"),
+    "folder groups should know when they or their child folders contain the active file"
   );
   assert(
     source.includes("if (isActiveFolder || forceOpen) setOpen(true);"),
@@ -117,6 +180,9 @@ function testSidebarExplorerShowsNavigationContext() {
 
 testSidebarSearchIsControlled();
 testSidebarSearchFiltersFilesAndFolders();
-testSidebarHidesFoldersWithoutMarkdownFiles();
+testSidebarShowsFoldersWithoutMarkdownFiles();
+testSidebarNestsSubfoldersUnderParents();
 testSidebarCanFilterVisibleFolders();
+testFolderFilterScrollStaysInsidePopover();
 testSidebarExplorerShowsNavigationContext();
+testSidebarSupportsFolderCreationAndDragDrop();

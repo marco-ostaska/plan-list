@@ -205,7 +205,7 @@ function App() {
 
   const persistContent = useCallback((fileId, content) => {
     if (!vaultPath || !fileId) return;
-    fetch("/api/file", {
+    return fetch("/api/file", {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ vault: vaultPath, path: fileId, content }),
@@ -287,6 +287,72 @@ function App() {
     pickFile(newFile.id);
   };
 
+  const handleNewFolder = async (parentDir = "") => {
+    if (!vaultPath) return;
+    const rawName = window.prompt("Nome da nova pasta:", "Nova pasta");
+    if (!rawName) return;
+    const name = rawName.trim() || "Nova pasta";
+    const r = await fetch("/api/folder", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ vault: vaultPath, parentDir, name }),
+    });
+    if (!r.ok) return;
+    const newFolder = await readJsonResponse(r);
+    setVault((v) => {
+      if (!v) return v;
+      return { ...v, folders: [...v.folders, newFolder] };
+    });
+  };
+
+  const handleMoveFile = async (fileId, targetDir) => {
+    if (!vaultPath || !fileId) return;
+    const currentDir = fileId.split("/").slice(0, -1).join("/");
+    const nextDir = targetDir || "";
+    if (currentDir === nextDir) return;
+    if (fileId === activeFileId && isDirtyRef.current) {
+      await persistContent(fileId, fileContent);
+    }
+    const r = await fetch("/api/file/move", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ vault: vaultPath, path: fileId, targetDir: nextDir }),
+    });
+    if (!r.ok) return;
+    const movedFile = await readJsonResponse(r);
+    if (commentsMap[fileId]) {
+      const next = { ...commentsMap, [movedFile.id]: commentsMap[fileId] };
+      delete next[fileId];
+      setCommentsMap(next);
+    }
+    setVault((v) => {
+      if (!v) return v;
+      let moving = null;
+      const removeMoved = (files) => files.filter((f) => {
+        if (f.id !== fileId) return true;
+        moving = { ...f, ...movedFile };
+        return false;
+      });
+      const rootFiles = removeMoved(v.rootFiles || []);
+      const folders = v.folders.map((folder) => ({ ...folder, files: removeMoved(folder.files || []) }));
+      if (!moving) return v;
+      if (!nextDir) {
+        return { ...v, rootFiles: [moving, ...rootFiles], folders };
+      }
+      return {
+        ...v,
+        rootFiles,
+        folders: folders.map((folder) =>
+          folder.id === nextDir ? { ...folder, files: [moving, ...folder.files] } : folder
+        ),
+      };
+    });
+    if (fileId === activeFileId) {
+      setActiveFileId(movedFile.id);
+      setFileUpdated(movedFile.updated || fileUpdated);
+    }
+  };
+
   // ── Rename ─────────────────────────────────────────────────────────────────
 
   const handleRename = async (newName) => {
@@ -357,6 +423,8 @@ function App() {
         accent={tweaks.accent}
         onPickFile={pickFile}
         onNewFile={handleNewFile}
+        onNewFolder={handleNewFolder}
+        onMoveFile={handleMoveFile}
         onChangeVault={() => { localStorage.removeItem("vaultPath"); setVaultPath(""); setVault(null); setActiveFileId(null); setVaultError(""); }}
       />
 
