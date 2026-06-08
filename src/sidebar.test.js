@@ -65,6 +65,27 @@ function testSidebarShowsFoldersWithoutMarkdownFiles() {
   );
 }
 
+function testSidebarNestsSubfoldersUnderParents() {
+  const source = readSidebarSource();
+
+  assert.ok(
+    source.includes("function buildFolderTree(folders) {"),
+    "sidebar should build a tree from flat folder paths"
+  );
+  assert.ok(
+    source.includes("parent.children.push(node);"),
+    "sidebar should attach subfolders to their parent folder"
+  );
+  assert.ok(
+    source.includes("function renderFolderTree(folder) {"),
+    "sidebar should render nested folder groups recursively"
+  );
+  assert.ok(
+    source.includes("{folder.children.map(renderFolderTree)}"),
+    "folder groups should show child folders inside the parent group"
+  );
+}
+
 function testSidebarSupportsFolderCreationAndDragDrop() {
   const source = readSidebarSource();
 
@@ -136,8 +157,12 @@ function testSidebarExplorerShowsNavigationContext() {
   const source = readSidebarSource();
 
   assert(
-    source.includes("const isActiveFolder = folder.files.some((file) => file.id === activeFileId);"),
-    "folder groups should know when they contain the active file"
+    source.includes("function folderContainsFile(folder, fileId) {"),
+    "folder groups should detect active files recursively"
+  );
+  assert(
+    source.includes("const isActiveFolder = folderContainsFile(folder, activeFileId);"),
+    "folder groups should know when they or their child folders contain the active file"
   );
   assert(
     source.includes("if (isActiveFolder || forceOpen) setOpen(true);"),
@@ -156,6 +181,7 @@ function testSidebarExplorerShowsNavigationContext() {
 testSidebarSearchIsControlled();
 testSidebarSearchFiltersFilesAndFolders();
 testSidebarShowsFoldersWithoutMarkdownFiles();
+testSidebarNestsSubfoldersUnderParents();
 testSidebarCanFilterVisibleFolders();
 testFolderFilterScrollStaysInsidePopover();
 testSidebarExplorerShowsNavigationContext();

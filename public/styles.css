@@ -366,6 +366,13 @@ a:hover { text-decoration: underline; }
 .folder-header:hover .folder-new-btn { opacity: 1; }
 
 .folder-files { display: flex; flex-direction: column; }
+.folder-children {
+  display: flex;
+  flex-direction: column;
+  margin-left: 18px;
+  padding-left: 6px;
+  border-left: 1px solid var(--border-muted);
+}
 
 /* file rows */
 .file-row { color: var(--fg-muted); }

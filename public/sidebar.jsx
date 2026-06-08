@@ -20,6 +20,27 @@ function FolderGlyph({ open }) {
   );
 }
 
+function buildFolderTree(folders) {
+  const nodes = new Map();
+  const roots = [];
+
+  folders.forEach((folder) => {
+    nodes.set(folder.id, { ...folder, children: [] });
+  });
+
+  nodes.forEach((node) => {
+    const parentId = node.id.split("/").slice(0, -1).join("/");
+    const parent = parentId ? nodes.get(parentId) : null;
+    if (parent) {
+      parent.children.push(node);
+    } else {
+      roots.push(node);
+    }
+  });
+
+  return roots;
+}
+
 function FileRow({ file, active, onClick, onDragStart }) {
   const tasks = window.extractTasks(file.content);
   const total = tasks.length;
@@ -52,10 +73,15 @@ function FileRow({ file, active, onClick, onDragStart }) {
   );
 }
 
+function folderContainsFile(folder, fileId) {
+  return folder.files.some((file) => file.id === fileId) ||
+    folder.children.some((child) => folderContainsFile(child, fileId));
+}
+
 function FolderGroup({ folder, activeFileId, onPickFile, onNewFile, onNewFolder, onMoveFile, onDragStart, forceOpen }) {
   const [open, setOpen] = React.useState(true);
   const [dragOver, setDragOver] = React.useState(false);
-  const isActiveFolder = folder.files.some((file) => file.id === activeFileId);
+  const isActiveFolder = folderContainsFile(folder, activeFileId);
   React.useEffect(() => { if (isActiveFolder || forceOpen) setOpen(true); }, [isActiveFolder, forceOpen]);
   const onDropFile = (e, targetDir) => {
     e.preventDefault();
@@ -94,10 +120,31 @@ function FolderGroup({ folder, activeFileId, onPickFile, onNewFile, onNewFolder,
           {folder.files.map((f) => (
             <FileRow key={f.id} file={f} active={f.id === activeFileId} onClick={() => onPickFile(f.id, folder.id)} onDragStart={onDragStart} />
           ))}
+          {folder.children.length > 0 ? (
+            <div className="folder-children">
+              {folder.children.map(renderFolderTree)}
+            </div>
+          ) : null}
         </div>
       ) : null}
     </div>
   );
+
+  function renderFolderTree(folder) {
+    return (
+      <FolderGroup
+        key={folder.id}
+        folder={folder}
+        activeFileId={activeFileId}
+        onPickFile={onPickFile}
+        onNewFile={onNewFile}
+        onNewFolder={onNewFolder}
+        onMoveFile={onMoveFile}
+        onDragStart={onDragStart}
+        forceOpen={forceOpen}
+      />
+    );
+  }
 }
 
 function Sidebar({ vault, activeFileId, onPickFile, onNewFile, onNewFolder, onMoveFile, onChangeVault }) {
@@ -153,6 +200,7 @@ function Sidebar({ vault, activeFileId, onPickFile, onNewFile, onNewFolder, onMo
       }
     : { ...vault, folders: visibleFolders };
 
+  const folderTree = buildFolderTree(displayedVault.folders);
   const displayedFileCount = displayedVault.folders.reduce((n, f) => n + f.files.length, 0) + (displayedVault.rootFiles?.length || 0);
   const totalFiles = visibleFolders.reduce((n, f) => n + f.files.length, 0) + rootFiles.length;
   const allFiles = navigableFolders.reduce((n, f) => n + f.files.length, 0) + rootFiles.length;
@@ -261,7 +309,7 @@ function Sidebar({ vault, activeFileId, onPickFile, onNewFile, onNewFolder, onMo
           </div>
         ) : null}
 
-        {displayedVault.folders.map((folder) => (
+        {folderTree.map((folder) => (
           <FolderGroup
             key={folder.id}
             folder={folder}
