@@ -266,7 +266,11 @@ a:hover { text-decoration: underline; }
 }
 .filter-reset:hover { background: var(--canvas-subtle); color: var(--fg); }
 
-.filter-popover-list { display: flex; flex-direction: column; gap: 1px; max-height: 200px; overflow-y: auto; }
+.filter-popover-list {
+  display: flex; flex-direction: column; gap: 1px;
+  max-height: 200px; overflow-y: auto;
+  overscroll-behavior: contain;
+}
 
 .filter-option {
   display: flex; align-items: center; gap: 9px;
@@ -310,6 +314,10 @@ a:hover { text-decoration: underline; }
 }
 
 .folder-group { margin-bottom: 1px; }
+.folder-group.is-drop-target .folder-header {
+  background: var(--accent-subtle);
+  outline: 1px solid var(--accent-muted);
+}
 
 .tree-row {
   display: flex; align-items: center; gap: 7px;

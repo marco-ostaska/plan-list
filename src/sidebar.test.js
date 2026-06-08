@@ -6,6 +6,10 @@ function readSidebarSource() {
   return fs.readFileSync(path.join(__dirname, "..", "public", "sidebar.jsx"), "utf8");
 }
 
+function readStylesSource() {
+  return fs.readFileSync(path.join(__dirname, "..", "public", "styles.css"), "utf8");
+}
+
 function testSidebarSearchIsControlled() {
   const source = readSidebarSource();
 
@@ -44,20 +48,45 @@ function testSidebarSearchFiltersFilesAndFolders() {
   );
 }
 
-function testSidebarHidesFoldersWithoutMarkdownFiles() {
+function testSidebarShowsFoldersWithoutMarkdownFiles() {
   const source = readSidebarSource();
 
   assert.ok(
-    source.includes("const navigableFolders = vault.folders.filter((folder) => folder.files.some((file) => file.name.endsWith(\".md\")));"),
-    "sidebar should hide folders that do not contain markdown files"
+    source.includes("const navigableFolders = vault.folders || [];"),
+    "sidebar should keep empty folders navigable"
   );
   assert.ok(
     source.includes("const totalFolders = navigableFolders.length;"),
-    "sidebar folder count should only include navigable markdown folders"
+    "sidebar folder count should include empty folders"
   );
   assert.ok(
     source.includes("folders: visibleFolders"),
-    "sidebar search should only operate on visible markdown folders"
+    "sidebar search should operate on visible folders"
+  );
+}
+
+function testSidebarSupportsFolderCreationAndDragDrop() {
+  const source = readSidebarSource();
+
+  assert.ok(
+    source.includes("onNewFolder"),
+    "sidebar should expose a folder creation action"
+  );
+  assert.ok(
+    source.includes("draggable={true}"),
+    "file rows should be draggable"
+  );
+  assert.ok(
+    source.includes("onDragStart={(e) => onDragStart(e, file.id)}"),
+    "file rows should start drags with their file id"
+  );
+  assert.ok(
+    source.includes("onDrop={(e) => onDropFile(e, folder.id)}"),
+    "folder rows should accept dropped files"
+  );
+  assert.ok(
+    source.includes("onDrop={(e) => onDropFile(e, \"\")}"),
+    "root file group should accept dropped files"
   );
 }
 
@@ -94,6 +123,15 @@ function testSidebarCanFilterVisibleFolders() {
   );
 }
 
+function testFolderFilterScrollStaysInsidePopover() {
+  const source = readStylesSource();
+
+  assert.ok(
+    source.includes("overscroll-behavior: contain;"),
+    "folder filter list should keep wheel and touch scrolling inside the popover"
+  );
+}
+
 function testSidebarExplorerShowsNavigationContext() {
   const source = readSidebarSource();
 
@@ -117,6 +155,8 @@ function testSidebarExplorerShowsNavigationContext() {
 
 testSidebarSearchIsControlled();
 testSidebarSearchFiltersFilesAndFolders();
-testSidebarHidesFoldersWithoutMarkdownFiles();
+testSidebarShowsFoldersWithoutMarkdownFiles();
 testSidebarCanFilterVisibleFolders();
+testFolderFilterScrollStaysInsidePopover();
 testSidebarExplorerShowsNavigationContext();
+testSidebarSupportsFolderCreationAndDragDrop();
